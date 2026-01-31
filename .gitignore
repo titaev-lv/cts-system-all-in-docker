@@ -1,0 +1,26 @@
+# Volumes - игнорировать СОДЕРЖИМОЕ, но не сами директории
+volumes/mysql-data/*
+volumes/mysql-dump/*
+volumes/hsm-tokens/*
+
+# Разрешить .gitkeep в директориях volumes
+!volumes/.gitkeep
+!volumes/mysql-data/.gitkeep
+!volumes/mysql-dump/.gitkeep
+!volumes/hsm-tokens/.gitkeep
+
+# Environment
+.env
+!.env.example
+
+# Логи
+*.log
+
+# Сервисы - игнорировать проекты с кодом (у них свой git)
+services/cts-core/
+services/hsm-service/
+services/trader-daemon/
+services/web-ui-go/
+
+# MySQL конфиги - разрешить (нет своего git)
+!services/mysql/

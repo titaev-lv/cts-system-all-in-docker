@@ -1,0 +1,173 @@
+services:
+  # 1. MySQL - общая БД
+  mysql:
+    image: mysql:9.4.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ct_system}
+      #MYSQL_USER: ${MYSQL_USER:-root}
+      #MYSQL_PASSWORD: ${MYSQL_PASSWORD:-root}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ./volumes/mysql-data:/var/lib/mysql
+      - ./volumes/mysql-dump:/mysql-dump
+      - ./services/mysql/my.cnf:/etc/mysql/my.cnf
+    #  - ./services/cts-core/migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "3306:3306"
+    networks:
+      - cts-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # 2. HSM Service
+#  hsm:
+#    build:
+#      context: ./services/hsm-service
+#      dockerfile: Dockerfile
+#    container_name: hsm
+#    volumes:
+#      - ./services/hsm-service/config.yaml:/app/config.yaml:ro
+#      - ./services/hsm-service/metadata.yaml:/app/metadata.yaml:ro
+#      - ./services/hsm-service/pki:/app/pki:ro
+#      - ./volumes/hsm-tokens:/app/data/tokens
+#    ports:
+#      - "8443:8443"
+#    networks:
+#      - cts-net
+#    healthcheck:
+#      test: ["CMD-SHELL", "pgrep -f hsm-service || exit 1"]
+#      interval: 15s
+#      timeout: 5s
+#      retries: 5
+#      start_period: 40s
+#    restart: unless-stopped
+
+  # 3. CTS-Core (оркестратор)
+#  cts-core:
+#    build:
+#      context: ./services/cts-core
+#      dockerfile: Dockerfile
+#    container_name: cts-core
+#    user: root
+#    depends_on:
+#      mysql:
+#        condition: service_healthy
+#      hsm:
+#        condition: service_healthy
+#    volumes:
+#      - ./services/cts-core/conf:/app/conf:ro
+#      - ./services/cts-core/pki:/app/pki:ro
+#      - ./services/cts-core/logs:/app/logs
+#      - ./services/cts-core/state:/app/state
+#    environment:
+#      - TZ=${TZ:-Europe/Moscow}
+#      - CTS_ENVIRONMENT=development
+#      - CTS_MYSQL_HOST=mysql
+#      - CTS_MYSQL_DATABASE=${MYSQL_DATABASE:-ct_system}
+#      - CTS_MYSQL_USER=${MYSQL_USER:-devuser}
+#      - CTS_MYSQL_PASSWORD=${MYSQL_PASSWORD:-devpass123}
+#      - CTS_HSM_URL=https://hsm:8443
+#    ports:
+#      - "8080:8080"  # REST API (Phase 1.5+)
+#      - "8081:8081"  # WebSocket (Phase 2+)
+#    networks:
+#      - cts-net
+#    healthcheck:
+#      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health", "||", "exit", "1"]
+#      interval: 15s
+#      timeout: 5s
+#      retries: 3
+#      start_period: 40s
+#    restart: unless-stopped
+
+  # 4-6. Traders (закомментированы до Phase 2 - WebSocket реализация)
+  # trader-1:
+  #   build:
+  #     context: ./services/trader-daemon
+  #     dockerfile: Dockerfile
+  #   container_name: trader-1
+  #   depends_on:
+  #     cts-core:
+  #       condition: service_healthy
+  #     hsm:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./services/trader-daemon/conf:/app/conf:ro
+  #     - ./services/trader-daemon/logs:/app/logs
+  #     - ./services/trader-daemon/state:/app/state
+  #   environment:
+  #     - TRADER_ID=trader-1
+  #     - TRADER_NAME=Binance-Trader-1
+  #     - CTS_CORE_URL=ws://cts-core:8081
+  #     - CTS_CORE_REST=http://cts-core:8080
+  #     - HSM_URL=https://hsm:8443
+  #     - TZ=${TZ:-Europe/Moscow}
+  #   networks:
+  #     - cts-net
+  #   restart: unless-stopped
+
+  # trader-2:
+  #   build:
+  #     context: ./services/trader-daemon
+  #     dockerfile: Dockerfile
+  #   container_name: trader-2
+  #   depends_on:
+  #     cts-core:
+  #       condition: service_healthy
+  #     hsm:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./services/trader-daemon/conf:/app/conf:ro
+  #     - ./services/trader-daemon/logs:/app/logs
+  #     - ./services/trader-daemon/state:/app/state
+  #   environment:
+  #     - TRADER_ID=trader-2
+  #     - TRADER_NAME=KuCoin-Trader-1
+  #     - CTS_CORE_URL=ws://cts-core:8081
+  #     - CTS_CORE_REST=http://cts-core:8080
+  #     - HSM_URL=https://hsm:8443
+  #     - TZ=${TZ:-Europe/Moscow}
+  #   networks:
+  #     - cts-net
+  #   restart: unless-stopped
+
+  # trader-3:
+  #   build:
+  #     context: ./services/trader-daemon
+  #     dockerfile: Dockerfile
+  #   container_name: trader-3
+  #   depends_on:
+  #     cts-core:
+  #       condition: service_healthy
+  #     hsm:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./services/trader-daemon/conf:/app/conf:ro
+  #     - ./services/trader-daemon/logs:/app/logs
+  #     - ./services/trader-daemon/state:/app/state
+  #   environment:
+  #     - TRADER_ID=trader-3
+  #     - TRADER_NAME=Bybit-Trader-1
+  #     - CTS_CORE_URL=ws://cts-core:8081
+  #     - CTS_CORE_REST=http://cts-core:8080
+  #     - HSM_URL=https://hsm:8443
+  #     - TZ=${TZ:-Europe/Moscow}
+  #   networks:
+  #     - cts-net
+  #   restart: unless-stopped
+
+networks:
+  cts-net:
+    driver: bridge
+    name: cts-network
+
+volumes:
+  mysql-data:
+  hsm-tokens:

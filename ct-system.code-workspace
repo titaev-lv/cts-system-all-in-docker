@@ -1,0 +1,30 @@
+{
+  "folders": [
+    {
+      "path": ".",
+      "name": "CT-System"
+    },
+    {
+      "path": "services/cts-core",
+      "name": "CTS-Core"
+    },
+    {
+      "path": "services/hsm-service",
+      "name": "HSM"
+    },
+    {
+      "path": "services/trader-daemon",
+      "name": "Trader"
+    },
+    {
+      "path": "services/mysql",
+      "name": "MySQL"
+    }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/volumes": true,
+      "services": true
+    }
+  }
+}
