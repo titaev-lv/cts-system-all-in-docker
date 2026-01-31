@@ -24,3 +24,9 @@ services/web-ui-go/
 
 # MySQL конфиги - разрешить (нет своего git)
 !services/mysql/
+
+# Но игнорировать ключи и сертификаты в mysql/pki
+services/mysql/pki/**/*.key
+services/mysql/pki/**/*.crt
+services/mysql/pki/**/*.pem
+services/mysql/pki/**/*.csr
