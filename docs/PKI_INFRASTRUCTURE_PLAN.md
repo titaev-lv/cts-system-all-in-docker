@@ -16,7 +16,7 @@
 
 ### Цель
 Автоматизировать:
-1. Установку проектов из GitHub (`install.sh`)
+1. Установку проектов из GitHub (`init-system.sh`)
 2. Генерацию dev CA и всех необходимых сертификатов
 3. Правильное монтирование PKI в docker-compose
 4. Поддержку 3 экземпляров trader-daemon
@@ -168,11 +168,11 @@ volumes/pki/
 - `scripts/pki/03-generate-client-certs.sh` - Все клиентские сертификаты
 - `scripts/pki/helpers.sh` - Общие функции
 
-### Phase 2: install.sh скрипт
+### Phase 2: init-system.sh скрипт
 
 ```bash
 #!/bin/bash
-# CT-System Installation Script
+# CT-System Initialization Script
 
 1. Проверка prerequisites (Docker, docker-compose, Git)
 2. Клонирование GitHub репозиториев:
@@ -287,7 +287,7 @@ Extensions:
 - [ ] `scripts/pki/02-generate-server-certs.sh` - 4 серверных сертификата
 - [ ] `scripts/pki/03-generate-client-certs.sh` - 16 клиентских сертификатов
 - [ ] `scripts/pki/clean-pki.sh` - очистка для пересоздания
-- [ ] `install.sh` - главный скрипт установки
+- [ ] `init-system.sh` - главный скрипт инициализации
 
 ### Конфигурация
 - [ ] Обновить `docker-compose.yml` с монтированием PKI
@@ -318,7 +318,7 @@ Extensions:
 3. Разработать `03-generate-client-certs.sh`
 4. Тестирование на чистой системе
 
-### Этап 3: install.sh (1 час)
+### Этап 3: init-system.sh (1 час)
 1. Разработать логику клонирования GitHub репозиториев
 2. Интеграция вызова PKI скриптов
 3. Проверка prerequisites
@@ -447,7 +447,7 @@ HashiCorp Vault PKI или Step-CA:
 
 1. ✅ План создан
 2. ⏳ Создать базовые PKI скрипты
-3. ⏳ Разработать install.sh
+3. ⏳ Разработать init-system.sh
 4. ⏳ Обновить docker-compose.yml
 5. ⏳ Тестирование на dev окружении
 6. ⏳ Документация обновлена
