@@ -2,7 +2,7 @@ services:
   # 1. MySQL - общая БД
   mysql:
     image: mysql:9.4.0
-    container_name: mysql
+    container_name: ct-system-mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-ct_system}
@@ -12,8 +12,9 @@ services:
     volumes:
       - ./volumes/mysql-data:/var/lib/mysql
       - ./volumes/mysql-dump:/mysql-dump
-      - ./services/mysql/my.cnf:/etc/mysql/my.cnf
-    #  - ./services/cts-core/migrations:/docker-entrypoint-initdb.d:ro
+      - ./services/mysql/my.cnf:/etc/mysql/my.cnf:ro
+      - ./services/mysql/pki:/etc/mysql/ssl:ro
+      #- ./services/cts-core/migrations:/docker-entrypoint-initdb.d:ro
     ports:
       - "3306:3306"
     networks:
@@ -24,94 +25,141 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
     restart: unless-stopped
 
   # 2. HSM Service
-#  hsm:
-#    build:
-#      context: ./services/hsm-service
-#      dockerfile: Dockerfile
-#    container_name: hsm
-#    volumes:
-#      - ./services/hsm-service/config.yaml:/app/config.yaml:ro
-#      - ./services/hsm-service/metadata.yaml:/app/metadata.yaml:ro
-#      - ./services/hsm-service/pki:/app/pki:ro
-#      - ./volumes/hsm-tokens:/app/data/tokens
-#    ports:
-#      - "8443:8443"
-#    networks:
-#      - cts-net
-#    healthcheck:
-#      test: ["CMD-SHELL", "pgrep -f hsm-service || exit 1"]
-#      interval: 15s
-#      timeout: 5s
-#      retries: 5
-#      start_period: 40s
-#    restart: unless-stopped
+  hsm:
+    build:
+      context: ./services/hsm-service
+      dockerfile: Dockerfile
+    container_name: ct-system-hsm
+    volumes:
+      - ./services/hsm-service/config.yaml:/app/config.yaml:ro
+      - ./services/hsm-service/metadata.yaml:/app/metadata.yaml:ro
+      - ./services/hsm-service/pki:/app/pki:ro
+      - ./services/hsm-service/scripts:/app/scripts:ro
+      - ./volumes/hsm-tokens:/var/lib/softhsm/tokens
+    ports:
+      - "8443:8443"
+    networks:
+      cts-net:
+        aliases:
+          - hsm-service
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f hsm-service || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    restart: unless-stopped
 
-  # 3. CTS-Core (оркестратор)
-#  cts-core:
-#    build:
-#      context: ./services/cts-core
-#      dockerfile: Dockerfile
-#    container_name: cts-core
-#    user: root
-#    depends_on:
-#      mysql:
-#        condition: service_healthy
-#      hsm:
-#        condition: service_healthy
-#    volumes:
-#      - ./services/cts-core/conf:/app/conf:ro
-#      - ./services/cts-core/pki:/app/pki:ro
-#      - ./services/cts-core/logs:/app/logs
-#      - ./services/cts-core/state:/app/state
-#    environment:
-#      - TZ=${TZ:-Europe/Moscow}
-#      - CTS_ENVIRONMENT=development
-#      - CTS_MYSQL_HOST=mysql
-#      - CTS_MYSQL_DATABASE=${MYSQL_DATABASE:-ct_system}
-#      - CTS_MYSQL_USER=${MYSQL_USER:-devuser}
-#      - CTS_MYSQL_PASSWORD=${MYSQL_PASSWORD:-devpass123}
-#      - CTS_HSM_URL=https://hsm:8443
-#    ports:
-#      - "8080:8080"  # REST API (Phase 1.5+)
-#      - "8081:8081"  # WebSocket (Phase 2+)
-#    networks:
-#      - cts-net
-#    healthcheck:
-#      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health", "||", "exit", "1"]
-#      interval: 15s
-#      timeout: 5s
-#      retries: 3
-#      start_period: 40s
-#    restart: unless-stopped
+  # 3. Web UI (веб-интерфейс)
+  web-ui:
+    build:
+      context: ./services/web-ui-go
+      dockerfile: Dockerfile
+    container_name: ct-system-web-ui
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./services/web-ui-go/config/config.yaml:/app/config/config.yaml:ro
+      - ./services/web-ui-go/logs:/app/logs
+    environment:
+      - TZ=${TZ:-UTC}
+      #- CT_DATABASE_MYSQL_HOST=ct-system-mysql
+      #- CT_DATABASE_MYSQL_USER=${MYSQL_USER:-root}
+      #- CT_DATABASE_MYSQL_PASSWORD=${MYSQL_PASSWORD:-root}
+      #- CT_DATABASE_MYSQL_DATABASE=${MYSQL_DATABASE:-ct_system}
+    ports:
+      - "80:80"
+    networks:
+      - cts-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80/login || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+    restart: unless-stopped
 
-  # 4-6. Traders (закомментированы до Phase 2 - WebSocket реализация)
-  # trader-1:
-  #   build:
-  #     context: ./services/trader-daemon
-  #     dockerfile: Dockerfile
-  #   container_name: trader-1
-  #   depends_on:
-  #     cts-core:
-  #       condition: service_healthy
-  #     hsm:
-  #       condition: service_healthy
-  #   volumes:
-  #     - ./services/trader-daemon/conf:/app/conf:ro
-  #     - ./services/trader-daemon/logs:/app/logs
-  #     - ./services/trader-daemon/state:/app/state
-  #   environment:
-  #     - TRADER_ID=trader-1
-  #     - TRADER_NAME=Binance-Trader-1
-  #     - CTS_CORE_URL=ws://cts-core:8081
-  #     - CTS_CORE_REST=http://cts-core:8080
-  #     - HSM_URL=https://hsm:8443
-  #     - TZ=${TZ:-Europe/Moscow}
-  #   networks:
-  #     - cts-net
-  #   restart: unless-stopped
+  # 4. CTS-Core (оркестратор)
+  cts-core:
+    build:
+      context: ./services/cts-core
+      dockerfile: Dockerfile
+    container_name: ct-system-cts-core
+    user: "0:0"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      hsm:
+        condition: service_healthy
+    volumes:
+      - ./services/cts-core/conf:/app/conf:ro
+      - ./services/cts-core/pki:/app/pki:ro
+      - ./services/cts-core/logs:/app/logs
+      - ./services/cts-core/state:/app/state
+    environment:
+      - TZ=${TZ:-UTC}
+    ports:
+      - "8080:8080"  # REST API (Phase 1.5+)
+      - "8081:8081"  # WebSocket (Phase 2+)
+    networks:
+      - cts-net
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f cts-core || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 2G
+    restart: unless-stopped
+
+  # 5. Trader-1 (test)
+  trader-1:
+    build:
+      context: ./services/trader-daemon
+      dockerfile: Dockerfile
+    container_name: ct-system-trader-1
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./services/trader-daemon/conf:/app/conf:ro
+      - ./services/trader-daemon/logs:/app/logs
+      - ./services/trader-daemon/state:/app/state
+    environment:
+      - TZ=${TZ:-UTC}
+    ports:
+      - "8082:8080"
+    networks:
+      - cts-net
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+    restart: unless-stopped
 
   # trader-2:
   #   build:

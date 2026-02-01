@@ -17,7 +17,7 @@ logs:
 	docker compose logs -f
 
 logs-core:
-	docker compose logs -f cts-core
+	tail -n 100 -f services/cts-core/logs/error.log
 
 logs-hsm:
 	docker compose logs -f hsm
@@ -25,7 +25,13 @@ logs-hsm:
 logs-mysql:
 	docker compose logs -f mysql
 
+logs-web-ui:
+	docker compose logs -f web-ui
+
 logs-trader-1:
+	tail -n 100 -f services/trader-daemon/logs/error.log
+
+logs-trader-2:
 	docker compose logs -f trader-1
 
 logs-trader-2:

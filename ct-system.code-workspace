@@ -19,6 +19,10 @@
     {
       "path": "services/mysql",
       "name": "MySQL"
+    },
+    {
+      "path": "services/web-ui-go",
+      "name": "Web UI Go"
     }
   ],
   "settings": {

@@ -2,14 +2,23 @@
 
 Единая Docker Compose среда для разработки и тестирования распределенной системы арбитражной торговли.
 
+## 📚 Документация
+
+- **[DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)** - Общий план разработки (начните отсюда!)
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Архитектура системы
+- **[LOGGING_ANALYSIS.md](LOGGING_ANALYSIS.md)** - Анализ логирования (Priority 1)
+- **[HSM_ROTATION.md](HSM_ROTATION.md)** - HSM key rotation (готово)
+- **services/\*/DEVELOPMENT_PLAN.md** - Детальные планы сервисов
+
 ## 🏗️ Архитектура
 
 Система состоит из следующих компонентов:
 
 - **MySQL** - общая база данных
-- **HSM Service** - служба управления ключами и шифрования
-- **CTS-Core** - центральный оркестратор (Phase 1.4-1.5)
-- **Trader Daemon** - торговые демоны (3 экземпляра, Phase 2+)
+- **HSM Service** - служба управления ключами и шифрования (production-ready)
+- **CTS-Core** - центральный оркестратор (Phase 1.3 complete, 1.4 in progress)
+- **Trader Daemon** - торговые демоны (Phase 1 complete, Phase 2 planned)
+- **Web UI** - административная панель (operational)
 
 ## 🚀 Быстрый старт
 
@@ -282,6 +291,7 @@ sudo lsof -i :8080
 ## 📚 Документация
 
 - [Миграция на Docker](MIGRATE_SYS_TO_DOCKER.md) - План миграции
+- [MySQL SSL Configuration](docs/MYSQL_SSL_SETUP.md) - Настройка SSL и создание пользователей
 - [CTS-Core Architecture](services/cts-core/ARCHITECTURE.md)
 - [CTS-Core Development Plan](services/cts-core/DEVELOPMENT_PLAN.md)
 - [HSM Service API](services/hsm-service/API.md)
