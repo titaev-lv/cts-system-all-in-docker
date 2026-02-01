@@ -1,4 +1,4 @@
-# Volumes - игнорировать СОДЕРЖИМОЕ, но не сами директории
+# Volumes - игнорировать СОДЕРЖИМОЕ data директорий, но не сами директории
 volumes/mysql-data/*
 volumes/mysql-dump/*
 volumes/hsm-tokens/*
@@ -8,6 +8,9 @@ volumes/hsm-tokens/*
 !volumes/mysql-data/.gitkeep
 !volumes/mysql-dump/.gitkeep
 !volumes/hsm-tokens/.gitkeep
+
+# PKI директория видима (со своим .gitignore для ключей)
+# Но сами сертификаты/ключи игнорируются через volumes/pki/.gitignore
 
 # Environment
 .env

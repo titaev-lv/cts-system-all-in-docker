@@ -27,7 +27,9 @@
   ],
   "settings": {
     "files.exclude": {
-      "**/volumes": true,
+      "**/volumes/mysql-data/*": true,
+      "**/volumes/mysql-dump/*": false,
+      "**/volumes/hsm-tokens/*": false,
       "services": true
     }
   }
