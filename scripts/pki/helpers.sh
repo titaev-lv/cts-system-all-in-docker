@@ -21,8 +21,9 @@ COUNTRY="RU"
 STATE="Moscow"
 CITY="Moscow"
 ORGANIZATION="CT-System-Dev"
-CA_VALIDITY_DAYS=3650  # 10 years for dev
-CERT_VALIDITY_DAYS=825  # Apple/Google max lifetime
+CA_VALIDITY_DAYS=3650     # 10 years for Root CA (dev)
+INT_VALIDITY_DAYS=3650    # 10 years for Intermediate CA (dev)
+CERT_VALIDITY_DAYS=825    # Apple/Google max lifetime for server/client certs
 
 # Print functions
 print_info() {
@@ -73,8 +74,8 @@ check_prerequisites() {
 
 # Validate CA exists
 validate_ca_exists() {
-    if [ ! -f "$CA_DIR/ca.crt" ] || [ ! -f "$CA_DIR/ca.key" ]; then
-        print_error "CA certificate or key not found in $CA_DIR"
+    if [ ! -f "$CA_DIR/ca.crt" ] || [ ! -f "$CA_DIR/intermediate-ca.key" ]; then
+        print_error "CA certificate or intermediate CA key not found in $CA_DIR"
         print_info "Please run scripts/pki/01-generate-ca.sh first"
         return 1
     fi
@@ -97,7 +98,7 @@ generate_private_key() {
     
     print_step "Generating RSA $key_size private key..."
     openssl genrsa -out "$key_file" "$key_size" 2>/dev/null
-    chmod 600 "$key_file"
+    chmod 644 "$key_file"  # Allow other users (e.g., mysql, hsm service) to read
     print_success "Private key saved to $key_file"
 }
 
@@ -123,11 +124,11 @@ sign_certificate() {
     local ext_file="$3"
     local validity_days="$4"
     
-    print_step "Signing certificate with CA..."
+    print_step "Signing certificate with Intermediate CA..."
     openssl x509 -req \
         -in "$csr_file" \
-        -CA "$CA_DIR/ca.crt" \
-        -CAkey "$CA_DIR/ca.key" \
+        -CA "$CA_DIR/intermediate-ca.crt" \
+        -CAkey "$CA_DIR/intermediate-ca.key" \
         -CAcreateserial \
         -out "$cert_file" \
         -days "$validity_days" \
@@ -187,10 +188,10 @@ EOF
 # Verify certificate
 verify_certificate() {
     local cert_file="$1"
-    local ca_file="${2:-$CA_DIR/ca.crt}"
     
     print_step "Verifying certificate..."
-    if openssl verify -CAfile "$ca_file" "$cert_file" >/dev/null 2>&1; then
+    # Use root-ca.crt as trust anchor and intermediate-ca.crt as untrusted intermediate
+    if openssl verify -CAfile "$CA_DIR/root-ca.crt" -untrusted "$CA_DIR/intermediate-ca.crt" "$cert_file" >/dev/null 2>&1; then
         print_success "Certificate verified successfully"
         return 0
     else

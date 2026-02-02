@@ -43,10 +43,10 @@ CLIENTS=(
     "cts-core-hsm-2fa|cts-core-hsm-2fa|2FA|hsm-service/clients/cts-core-2fa|CTS-Core to HSM (2FA)"
     
     # HSM clients - Trader context
-    "cts-core-hsm-trader|cts-core-hsm-trader|Trader|hsm-service/clients/cts-core-trader|CTS-Core to HSM (Trader)"
-    "trader-1-hsm|trader-1-hsm-client|Trader|hsm-service/clients/trader-1|Trader-1 to HSM"
-    "trader-2-hsm|trader-2-hsm-client|Trader|hsm-service/clients/trader-2|Trader-2 to HSM"
-    "trader-3-hsm|trader-3-hsm-client|Trader|hsm-service/clients/trader-3|Trader-3 to HSM"
+    "cts-core-hsm-trader|cts-core-hsm-trader|Trading|hsm-service/clients/cts-core-trader|CTS-Core to HSM (Trader)"
+    "trader-1-hsm|trader-1-hsm-client|Trading|hsm-service/clients/trader-1|Trader-1 to HSM"
+    "trader-2-hsm|trader-2-hsm-client|Trading|hsm-service/clients/trader-2|Trader-2 to HSM"
+    "trader-3-hsm|trader-3-hsm-client|Trading|hsm-service/clients/trader-3|Trader-3 to HSM"
     
     # ClickHouse clients
     "web-ui-clickhouse|web-ui-clickhouse-client|Database|clickhouse/clients/web-ui|Web UI to ClickHouse"
@@ -56,9 +56,9 @@ CLIENTS=(
     
     # CTS-Core clients
     "web-ui-cts|web-ui-cts-client|Admin|cts-core/clients/web-ui|Web UI to CTS-Core"
-    "trader-1-cts|trader-1-cts-client|Trader|cts-core/clients/trader-1|Trader-1 to CTS-Core"
-    "trader-2-cts|trader-2-cts-client|Trader|cts-core/clients/trader-2|Trader-2 to CTS-Core"
-    "trader-3-cts|trader-3-cts-client|Trader|cts-core/clients/trader-3|Trader-3 to CTS-Core"
+    "trader-1-cts|trader-1-cts-client|Trading|cts-core/clients/trader-1|Trader-1 to CTS-Core"
+    "trader-2-cts|trader-2-cts-client|Trading|cts-core/clients/trader-2|Trader-2 to CTS-Core"
+    "trader-3-cts|trader-3-cts-client|Trading|cts-core/clients/trader-3|Trader-3 to CTS-Core"
 )
 
 # Function to generate client certificate
