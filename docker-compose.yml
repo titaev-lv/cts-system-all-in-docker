@@ -13,7 +13,9 @@ services:
       - ./volumes/mysql-data:/var/lib/mysql
       - ./volumes/mysql-dump:/mysql-dump
       - ./services/mysql/my.cnf:/etc/mysql/my.cnf:ro
-      - ./services/mysql/pki:/etc/mysql/ssl:ro
+      - ./volumes/pki/ca/ca.crt:/etc/mysql/ssl/ca/ca.crt:ro
+      - ./volumes/pki/mysql/server/mysql.crt:/etc/mysql/ssl/server/mysql.server.crt:ro
+      - ./volumes/pki/mysql/server/mysql.key:/etc/mysql/ssl/server/mysql.server.key:ro
       #- ./services/cts-core/migrations:/docker-entrypoint-initdb.d:ro
     ports:
       - "3306:3306"
@@ -41,7 +43,10 @@ services:
     volumes:
       - ./services/hsm-service/config.yaml:/app/config.yaml:ro
       - ./services/hsm-service/metadata.yaml:/app/metadata.yaml:ro
-      - ./services/hsm-service/pki:/app/pki:ro
+      - ./volumes/pki/ca/ca.crt:/app/pki/ca/ca.crt:ro
+      - ./volumes/pki/hsm-service/server/hsm-service.crt:/app/pki/server/hsm-service.local.crt:ro
+      - ./volumes/pki/hsm-service/server/hsm-service.key:/app/pki/server/hsm-service.local.key:ro
+      - ./volumes/pki/revoked.yaml:/app/pki/revoked.yaml:ro
       - ./services/hsm-service/scripts:/app/scripts:ro
       - ./volumes/hsm-tokens:/var/lib/softhsm/tokens
     ports:
@@ -75,6 +80,15 @@ services:
     volumes:
       - ./services/web-ui-go/config/config.yaml:/app/config/config.yaml:ro
       - ./services/web-ui-go/logs:/app/logs
+      - ./volumes/pki/ca/ca.crt:/app/pki/ca/ca.crt:ro
+      - ./volumes/pki/mysql/clients/web-ui/web-ui-mysql.crt:/app/pki/mysql/client.crt:ro
+      - ./volumes/pki/mysql/clients/web-ui/web-ui-mysql.key:/app/pki/mysql/client.key:ro
+      - ./volumes/pki/hsm-service/clients/web-ui-2fa/web-ui-hsm-2fa.crt:/app/pki/hsm/client.crt:ro
+      - ./volumes/pki/hsm-service/clients/web-ui-2fa/web-ui-hsm-2fa.key:/app/pki/hsm/client.key:ro
+      - ./volumes/pki/cts-core/clients/web-ui/web-ui-cts.crt:/app/pki/cts-core/client.crt:ro
+      - ./volumes/pki/cts-core/clients/web-ui/web-ui-cts.key:/app/pki/cts-core/client.key:ro
+      - ./volumes/pki/clickhouse/clients/web-ui/web-ui-clickhouse.crt:/app/pki/clickhouse/client.crt:ro
+      - ./volumes/pki/clickhouse/clients/web-ui/web-ui-clickhouse.key:/app/pki/clickhouse/client.key:ro
     environment:
       - TZ=${TZ:-UTC}
       #- CT_DATABASE_MYSQL_HOST=ct-system-mysql
@@ -112,9 +126,17 @@ services:
         condition: service_healthy
     volumes:
       - ./services/cts-core/conf:/app/conf:ro
-      - ./services/cts-core/pki:/app/pki:ro
       - ./services/cts-core/logs:/app/logs
       - ./services/cts-core/state:/app/state
+      - ./volumes/pki/ca/ca.crt:/app/pki/ca/ca.crt:ro
+      - ./volumes/pki/cts-core/server/cts-core.crt:/app/pki/server/cts-core.crt:ro
+      - ./volumes/pki/cts-core/server/cts-core.key:/app/pki/server/cts-core.key:ro
+      - ./volumes/pki/mysql/clients/cts-core/cts-core-mysql.crt:/app/pki/mysql/client.crt:ro
+      - ./volumes/pki/mysql/clients/cts-core/cts-core-mysql.key:/app/pki/mysql/client.key:ro
+      - ./volumes/pki/hsm-service/clients/cts-core-2fa/cts-core-hsm-2fa.crt:/app/pki/hsm/2fa/client.crt:ro
+      - ./volumes/pki/hsm-service/clients/cts-core-2fa/cts-core-hsm-2fa.key:/app/pki/hsm/2fa/client.key:ro
+      - ./volumes/pki/hsm-service/clients/cts-core-trader/cts-core-hsm-trader.crt:/app/pki/hsm/trader/client.crt:ro
+      - ./volumes/pki/hsm-service/clients/cts-core-trader/cts-core-hsm-trader.key:/app/pki/hsm/trader/client.key:ro
     environment:
       - TZ=${TZ:-UTC}
     ports:
@@ -148,6 +170,13 @@ services:
       - ./services/trader-daemon/conf:/app/conf:ro
       - ./services/trader-daemon/logs:/app/logs
       - ./services/trader-daemon/state:/app/state
+      - ./volumes/pki/ca/ca.crt:/app/pki/ca/ca.crt:ro
+      - ./volumes/pki/hsm-service/clients/trader-1/trader-1-hsm.crt:/app/pki/hsm/client.crt:ro
+      - ./volumes/pki/hsm-service/clients/trader-1/trader-1-hsm.key:/app/pki/hsm/client.key:ro
+      - ./volumes/pki/cts-core/clients/trader-1/trader-1-cts.crt:/app/pki/cts-core/client.crt:ro
+      - ./volumes/pki/cts-core/clients/trader-1/trader-1-cts.key:/app/pki/cts-core/client.key:ro
+      - ./volumes/pki/clickhouse/clients/trader-1/trader-1-clickhouse.crt:/app/pki/clickhouse/client.crt:ro
+      - ./volumes/pki/clickhouse/clients/trader-1/trader-1-clickhouse.key:/app/pki/clickhouse/client.key:ro
     environment:
       - TZ=${TZ:-UTC}
     ports:
@@ -175,6 +204,13 @@ services:
   #     - ./services/trader-daemon/conf:/app/conf:ro
   #     - ./services/trader-daemon/logs:/app/logs
   #     - ./services/trader-daemon/state:/app/state
+  #     - ./volumes/pki/ca/ca.crt:/app/pki/ca/ca.crt:ro
+  #     - ./volumes/pki/hsm-service/clients/trader-2/trader-2-hsm.crt:/app/pki/hsm/client.crt:ro
+  #     - ./volumes/pki/hsm-service/clients/trader-2/trader-2-hsm.key:/app/pki/hsm/client.key:ro
+  #     - ./volumes/pki/cts-core/clients/trader-2/trader-2-cts.crt:/app/pki/cts-core/client.crt:ro
+  #     - ./volumes/pki/cts-core/clients/trader-2/trader-2-cts.key:/app/pki/cts-core/client.key:ro
+  #     - ./volumes/pki/clickhouse/clients/trader-2/trader-2-clickhouse.crt:/app/pki/clickhouse/client.crt:ro
+  #     - ./volumes/pki/clickhouse/clients/trader-2/trader-2-clickhouse.key:/app/pki/clickhouse/client.key:ro
   #   environment:
   #     - TRADER_ID=trader-2
   #     - TRADER_NAME=KuCoin-Trader-1
@@ -200,6 +236,13 @@ services:
   #     - ./services/trader-daemon/conf:/app/conf:ro
   #     - ./services/trader-daemon/logs:/app/logs
   #     - ./services/trader-daemon/state:/app/state
+  #     - ./volumes/pki/ca/ca.crt:/app/pki/ca/ca.crt:ro
+  #     - ./volumes/pki/hsm-service/clients/trader-3/trader-3-hsm.crt:/app/pki/hsm/client.crt:ro
+  #     - ./volumes/pki/hsm-service/clients/trader-3/trader-3-hsm.key:/app/pki/hsm/client.key:ro
+  #     - ./volumes/pki/cts-core/clients/trader-3/trader-3-cts.crt:/app/pki/cts-core/client.crt:ro
+  #     - ./volumes/pki/cts-core/clients/trader-3/trader-3-cts.key:/app/pki/cts-core/client.key:ro
+  #     - ./volumes/pki/clickhouse/clients/trader-3/trader-3-clickhouse.crt:/app/pki/clickhouse/client.crt:ro
+  #     - ./volumes/pki/clickhouse/clients/trader-3/trader-3-clickhouse.key:/app/pki/clickhouse/client.key:ro
   #   environment:
   #     - TRADER_ID=trader-3
   #     - TRADER_NAME=Bybit-Trader-1

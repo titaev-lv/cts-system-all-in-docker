@@ -21,3 +21,4 @@ revoked.yaml
 !.gitkeep
 !README.md
 !.gitignore
+!revoked.yaml
