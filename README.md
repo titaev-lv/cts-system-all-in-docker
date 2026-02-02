@@ -2,16 +2,6 @@
 
 Единая Docker Compose среда для разработки и тестирования распределенной системы арбитражной торговли.
 
-## ⚡ Быстро начать
-
-```bash
-# Для новичков (полная автоматизация):
-./init-system.sh
-
-# Для опытных (читай дальше):
-# Смотри раздел "Быстрый старт" → "Ручная установка"
-```
-
 ## 📚 Документация
 
 - **[DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)** - Общий план разработки (начните отсюда!)
@@ -30,35 +20,7 @@
 - **Trader Daemon** - торговые демоны (Phase 1 complete, Phase 2 planned)
 - **Web UI** - административная панель (operational)
 
-## 🚀 Быстрый старт
-
-### Автоматическая установка (рекомендуется)
-
-Для новичков рекомендуется использовать автоматический скрипт инициализации:
-
-```bash
-# Запустить интерактивный скрипт
-./init-system.sh
-
-# Или с опциями
-./init-system.sh --skip-clone      # Пропустить клонирование репозиториев
-./init-system.sh --skip-pki        # Использовать существующие сертификаты
-./init-system.sh --skip-docker     # Не запускать Docker Compose
-```
-
-✨ Скрипт автоматически:
-- Проверяет все зависимости
-- Генерирует PKI инфраструктуру
-- Клонирует (или проверяет) сервисы
-- Инициализирует конфигурационные файлы
-- Запускает Docker Compose
-- Проверяет здоровье сервисов
-
----
-
-### Ручная установка (пошаговый гайд)
-
-#### Предварительные требования
+## � Предварительные требования
 
 - Docker 20.10+
 - Docker Compose 2.0+
@@ -68,47 +30,9 @@
 - **OpenSSL 1.1.1+** (для генерации PKI)
 - **bash 4.0+** (для скриптов генерации)
 
-### Установка зависимостей
+## 📦 Установка зависимостей
 
-#### Linux (Ubuntu/Debian)
-
-```bash
-# OpenSSL и другие необходимые утилиты
-sudo apt-get update
-sudo apt-get install -y openssl ca-certificates git
-
-# Проверка версии
-openssl version
-# Output: OpenSSL 1.1.1 или выше
-```
-
-#### macOS
-
-```bash
-# Использовать Homebrew
-brew install openssl
-
-# Проверка версии
-openssl version
-```
-
-#### Windows
-
-Используйте WSL2 (Windows Subsystem for Linux) или Git Bash:
-
-```bash
-# WSL2 (рекомендуется)
-wsl --install
-# Затем внутри WSL выполнить команды как на Ubuntu
-
-# Или Git Bash
-# OpenSSL включен в Git for Windows
-openssl version
-```
-
-#### Установка зависимостей
-
-##### Linux (Ubuntu/Debian)
+### Linux (Ubuntu/Debian)
 
 ```bash
 # OpenSSL и другие необходимые утилиты
@@ -122,7 +46,7 @@ bash --version
 # Output: GNU bash, version 4.0 или выше
 ```
 
-##### macOS
+### macOS
 
 ```bash
 # Использовать Homebrew
@@ -133,7 +57,7 @@ openssl version
 bash --version
 ```
 
-##### Windows
+### Windows
 
 Используйте WSL2 (Windows Subsystem for Linux) или Git Bash:
 
@@ -147,97 +71,56 @@ wsl --install
 openssl version
 ```
 
-#### Пошаговая установка
+## 🚀 Быстрый старт
 
-**1. Клонировать ct-system репозиторий:**
+### 1. Клонировать репозиторий
 
 ```bash
 git clone https://github.com/titaev-lv/cts-system-all-in-docker.git cts-system
 cd cts-system
 ```
 
-**2. Сгенерировать PKI инфраструктуру (сертификаты и ключи):**
-
-Это требуется для установления mTLS соединений между сервисами.
+### 2. Запустить инициализацию
 
 ```bash
-# Генерируем Root CA + Intermediate CA иерархию
-./scripts/pki/01-generate-ca.sh
-
-# Генерируем серверные сертификаты (4 шт)
-./scripts/pki/02-generate-server-certs.sh
-
-# Генерируем клиентские сертификаты (16 шт)
-./scripts/pki/03-generate-client-certs.sh
-
-# Результат: volumes/pki/ директория с полной структурой сертификатов
-# Все сертификаты автоматически монтируются в контейнеры
+chmod +x init-system.sh
+./init-system.sh
 ```
 
-⏱️ **Время генерации:** 1-2 минуты
+**Скрипт выполнит:**
+- ✅ Проверку всех зависимостей (Docker, OpenSSL, bash)
+- ✅ Генерацию PKI инфраструктуры (Root CA + Intermediate CA)
+- ✅ Генерацию 4 серверных и 16 клиентских сертификатов
+- ✅ Проверку/клонирование сервисов из GitHub
+- ✅ Инициализацию конфигурационных файлов (.env, config.yaml, config.ini)
+- ✅ Запуск всех Docker контейнеров
+- ✅ Проверку здоровья сервисов
 
-✅ **Что генерируется:**
-- Root CA (самоподписанный trust anchor)
-- Intermediate CA (подписан Root CA)
-- 4 серверных сертификата (MySQL, HSM, CTS-Core, ClickHouse)
-- 16 клиентских сертификатов (для mTLS между сервисами)
-
-**3. Клонировать проекты сервисов:**
-
+**Опции (если нужны):**
 ```bash
-# CTS-Core (центральный оркестратор)
-git clone <cts-core-url> services/cts-core
-
-# HSM Service (управление ключами)
-git clone <hsm-service-url> services/hsm-service
-
-# Trader Daemon (торговые демоны)
-git clone <trader-daemon-url> services/trader-daemon
-
-# Web UI (опционально)
-git clone <web-ui-url> services/web-ui-go
+./init-system.sh --skip-clone       # Если сервисы уже клонированы
+./init-system.sh --skip-pki         # Если сертификаты уже есть
+./init-system.sh --skip-docker      # Только подготовить, не запускать
 ```
 
-**Альтернатива:** Если проекты уже склонированы в другом месте, используйте symlinks:
+⏱️ **Время первого запуска:** 2-3 минуты (PKI генерация ~1-2 мин)
+
+✨ **После успешного завершения:**
+- MySQL будет готов к подключению: `localhost:3306`
+- HSM API доступен: `https://localhost:8443`
+- CTS-Core API доступен: `http://localhost:8080`
+- Все логи смотрите через: `make logs`
+
+### 3. Проверить статус
 
 ```bash
-ln -s /path/to/existing/cts-core services/cts-core
-ln -s /path/to/existing/hsm-service services/hsm-service
-ln -s /path/to/existing/trader-daemon services/trader-daemon
-```
-
-**4. Настроить окружение:**
-
-Инициализируются автоматически, но можете отредактировать:
-
-```bash
-# Переменные окружения
-cp .env.example .env
-vim .env
-
-# Конфигурация CTS-Core
-vim services/cts-core/conf/config.ini
-
-# Конфигурация HSM
-vim services/hsm-service/config.yaml
-
-# Конфигурация Trader Daemon
-vim services/trader-daemon/conf/config.ini
-```
-
-**5. Запустить систему:**
-
-```bash
-# Запустить все сервисы
-make up
-
-# Или без Makefile:
-docker compose up -d
-
-# Проверить статус
+# Показать все запущенные контейнеры
 make ps
 
-# Просмотр логов
+# Посмотреть логи всех сервисов
+make logs
+
+# Посмотреть логи конкретного сервиса
 make logs-core
 make logs-hsm
 make logs-mysql
@@ -506,100 +389,7 @@ Workspace включает:
 - 🔐 HSM Service
 - 🤖 Trader Daemon
 
-## 🔗 Роль файлов в проекте
-
-### 📖 README.md - **Полная документация**
-**Назначение:** Главный справочник проекта
-
-**Содержит:**
-- ✅ Архитектуру системы
-- ✅ Требования и установку
-- ✅ Команды Makefile для повседневной работы
-- ✅ Информацию о портах, здоровье и конфигурации
-- ✅ Troubleshooting и решение проблем
-- ✅ Ссылки на детальную документацию каждого сервиса
-- ✅ Roadmap и планы развития
-
-**Для кого:** Для опытных разработчиков, которые уже знают систему
-
-**Как использовать:** Ищите нужный раздел и выполняйте команды вручную
-
----
-
-### 🤖 init-system.sh - **Автоматизация для новичков**
-**Назначение:** Полностью автоматизировать первую установку
-
-**Выполняет:**
-- ✅ Проверку всех зависимостей (Docker, OpenSSL, bash)
-- ✅ Инициализацию .env файла
-- ✅ Генерацию PKI инфраструктуры (сертификаты)
-- ✅ Проверку/клонирование сервисов
-- ✅ Инициализацию конфигурационных файлов
-- ✅ Запуск Docker Compose
-- ✅ Проверку здоровья сервисов
-
-**Опции:**
-```bash
-./init-system.sh                    # Полная автоматизация
-./init-system.sh --skip-clone       # Не клонировать репозитории
-./init-system.sh --skip-pki         # Использовать существующие сертификаты
-./init-system.sh --skip-docker      # Не запускать Docker
-```
-
-**Для кого:** Для новичков и в production
-
-**Как использовать:** Просто запустите и следуйте подсказкам
-
----
-
-### 📋 Рекомендуемый workflow
-
-**Для новичков (первый раз):**
-```bash
-1. chmod +x init-system.sh          # Сделать скрипт исполняемым
-2. ./init-system.sh                 # Полная автоматизация
-3. Читаем README.md для понимания   # Разбираемся что произошло
-4. make logs                        # Смотрим логи
-```
-
-**Для разработки (по дням):**
-```bash
-# Запустить окружение
-make up
-
-# Смотреть логи конкретного сервиса
-make logs-core
-make logs-hsm
-
-# Перезапустить сервис после изменений
-docker compose restart cts-core
-
-# Остановить все
-make down
-```
-
-**Для переустановки:**
-```bash
-./init-system.sh --skip-clone       # Повторная инициализация
-./init-system.sh --skip-pki         # Если PKI уже есть
-```
-
----
-
-### ⚙️ Когда какой файл использовать
-
-| Задача | Где искать |
-|--------|-----------|
-| **Первая установка** | `./init-system.sh` |
-| **Понять как работает система** | `README.md` - раздел Архитектура |
-| **Запустить сервисы заново** | `make up` или README раздел Команды |
-| **Посмотреть логи** | `make logs` или README раздел Логи |
-| **Узнать про порты и здоровье** | README раздел Порты и Health Checks |
-| **Решить проблему** | README раздел Troubleshooting |
-| **Узнать про Roadmap** | README раздел Roadmap |
-| **Развернуть в production** | `./init-system.sh --skip-clone` |
-
-## �📝 Примечания
+##  Примечания
 
 - **Traders закомментированы**: До реализации WebSocket в Phase 2
 - **Volumes не в git**: `volumes/` исключены из версионирования
@@ -625,4 +415,4 @@ make logs
 
 ---
 
-**Последнее обновление:** 31 января 2026
+**Последнее обновление:** 3 февраля 2026
