@@ -485,8 +485,56 @@ if [ $SKIP_DOCKER -eq 0 ]; then
     print_step "Waiting for services to initialize..."
     sleep 5
     
+    # Check if MySQL is running and initialize database if needed
+    print_header "Step 6: Initializing MySQL Database"
+    
+    if [[ " ${AVAILABLE_SERVICES[*]} " =~ " mysql " ]]; then
+        # MySQL is running, check for init SQL
+        INIT_SQL_FILE="$PROJECT_ROOT/volumes/mysql-dump/init.sql"
+        
+        if [ -f "$INIT_SQL_FILE" ]; then
+            print_step "Found init.sql, initializing database..."
+            
+            # Wait for MySQL to be ready
+            print_step "Waiting for MySQL to be ready..."
+            for i in {1..30}; do
+                if $DOCKER_COMPOSE_CMD exec -T mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" -e "SELECT 1" &>/dev/null; then
+                    print_success "MySQL is ready"
+                    break
+                fi
+                if [ $i -eq 30 ]; then
+                    print_error "MySQL failed to start within 30 seconds"
+                    exit 1
+                fi
+                sleep 1
+            done
+            
+            # Create database
+            print_step "Creating database cts-system..."
+            if $DOCKER_COMPOSE_CMD exec -T mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" -e "CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE:-ct_system} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" &>/dev/null; then
+                print_success "Database created"
+            else
+                print_error "Failed to create database"
+                exit 1
+            fi
+            
+            # Load initial data
+            print_step "Loading initial data from init.sql..."
+            if $DOCKER_COMPOSE_CMD exec -T mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" "${MYSQL_DATABASE:-ct_system}" < "$INIT_SQL_FILE" &>/dev/null; then
+                print_success "Initial data loaded successfully"
+            else
+                print_error "Failed to load initial data"
+                exit 1
+            fi
+        else
+            print_info "init.sql not found at $INIT_SQL_FILE"
+            print_info "To initialize database later, run:"
+            echo "  docker compose exec mysql mysql -u root -p < volumes/mysql-dump/init.sql"
+        fi
+    fi
+    
     # Check service health
-    print_header "Step 6: Checking Service Health"
+    print_header "Step 7: Checking Service Health"
     
     print_step "Checking running containers..."
     $DOCKER_COMPOSE_CMD ps

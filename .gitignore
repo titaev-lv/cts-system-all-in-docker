@@ -9,6 +9,9 @@ volumes/hsm-tokens/*
 !volumes/mysql-dump/.gitkeep
 !volumes/hsm-tokens/.gitkeep
 
+# Разрешить init.sql для загрузки базы данных
+!volumes/mysql-dump/init.sql
+
 # PKI директория видима (со своим .gitignore для ключей)
 # Но сами сертификаты/ключи игнорируются через volumes/pki/.gitignore
 
