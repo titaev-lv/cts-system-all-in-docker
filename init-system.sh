@@ -171,50 +171,100 @@ if [ $SKIP_CLONE -eq 0 ]; then
     print_header "Step 2: Cloning Service Repositories"
     
     print_info "This step clones service repositories from GitHub"
-    print_warning "Note: GitHub URLs need to be configured in .env file"
     echo ""
     
-    # Check if .env file exists
-    if [ ! -f "$PROJECT_ROOT/.env" ]; then
+    # Check if .env file exists and load it
+    ENV_FILE="$PROJECT_ROOT/.env"
+    if [ ! -f "$ENV_FILE" ]; then
         if [ -f "$PROJECT_ROOT/.env.example" ]; then
             print_step "Creating .env from .env.example..."
-            cp "$PROJECT_ROOT/.env.example" "$PROJECT_ROOT/.env"
+            cp "$PROJECT_ROOT/.env.example" "$ENV_FILE"
             print_success ".env file created"
             print_warning "Please configure GitHub URLs in .env file"
         else
             print_warning ".env.example not found"
-            print_info "Skipping repository cloning - services directory should exist"
+            print_info "Skipping repository cloning"
+            ENV_FILE=""
         fi
     fi
     
-    # Define services to clone
+    # Load environment variables from .env if it exists
+    if [ -f "$ENV_FILE" ]; then
+        set +a  # Don't export all variables
+        source "$ENV_FILE" 2>/dev/null || true
+        set -a
+    fi
+    
+    # Define services with their paths and env variable names
     declare -A SERVICES=(
-        ["cts-core"]="services/cts-core"
-        ["hsm-service"]="services/hsm-service"
-        ["trader-daemon"]="services/trader-daemon"
-        ["web-ui-go"]="services/web-ui-go"
+        ["cts-core"]="services/cts-core:CTS_CORE_REPO_URL"
+        ["hsm-service"]="services/hsm-service:HSM_SERVICE_REPO_URL"
+        ["trader-daemon"]="services/trader-daemon:TRADER_DAEMON_REPO_URL"
+        ["web-ui-go"]="services/web-ui-go:WEB_UI_GO_REPO_URL"
     )
     
-    # Check which services exist
+    CLONED_COUNT=0
+    SKIPPED_COUNT=0
+    
+    # Clone or check services
     for service_name in "${!SERVICES[@]}"; do
-        service_path="${SERVICES[$service_name]}"
+        IFS=':' read -r service_path env_var_name <<< "${SERVICES[$service_name]}"
+        full_path="$PROJECT_ROOT/$service_path"
         
-        if [ -d "$PROJECT_ROOT/$service_path" ]; then
-            if [ -d "$PROJECT_ROOT/$service_path/.git" ]; then
-                print_info "$service_name: Already exists (git repository)"
+        # Get repository URL from environment variable
+        env_var_name="${env_var_name//[[:space:]]/}"  # Remove whitespace
+        repo_url="${!env_var_name:-}"  # Get variable value or empty string
+        
+        # Check if directory exists and is not empty
+        if [ -d "$full_path" ] && [ -n "$(ls -A "$full_path" 2>/dev/null)" ]; then
+            # Service directory exists and not empty
+            if [ -d "$full_path/.git" ]; then
+                print_success "$service_name: Already cloned (git repository)"
             else
-                print_info "$service_name: Directory exists (not a git repo)"
+                print_warning "$service_name: Directory exists with content (not a git repo)"
             fi
+            ((SKIPPED_COUNT++))
         else
-            print_warning "$service_name: Not found at $service_path"
-            print_info "You can clone it manually or add GitHub URL to .env"
+            # Service directory doesn't exist or is empty
+            if [ -n "$repo_url" ]; then
+                # Repository URL is configured
+                print_step "Cloning $service_name from $repo_url..."
+                
+                # Create parent directory if needed
+                mkdir -p "$(dirname "$full_path")"
+                
+                if git clone "$repo_url" "$full_path"; then
+                    print_success "$service_name: Cloned successfully"
+                    ((CLONED_COUNT++))
+                else
+                    print_error "Failed to clone $service_name"
+                    print_info "URL: $repo_url"
+                fi
+            else
+                # Repository URL not configured
+                if [ -d "$full_path" ]; then
+                    print_warning "$service_name: Directory is empty and no URL configured"
+                else
+                    print_warning "$service_name: Not found and no URL configured"
+                fi
+                print_info "Add ${env_var_name}=<url> to .env to enable auto-cloning"
+                print_info "Or clone manually: git clone <url> $service_path"
+            fi
         fi
     done
     
     echo ""
-    print_info "Repository cloning completed"
-    print_info "If services are missing, clone them manually:"
-    echo "  git clone <repo-url> services/<service-name>"
+    if [ $CLONED_COUNT -gt 0 ] || [ $SKIPPED_COUNT -gt 0 ]; then
+        print_success "Repository processing completed"
+        if [ $CLONED_COUNT -gt 0 ]; then
+            print_info "Cloned: $CLONED_COUNT service(s)"
+        fi
+        if [ $SKIPPED_COUNT -gt 0 ]; then
+            print_info "Skipped: $SKIPPED_COUNT service(s) (already exist)"
+        fi
+    else
+        print_warning "No services were processed"
+    fi
 else
     print_header "Step 2: Skipping Repository Cloning"
     print_info "Using existing service directories"
@@ -353,7 +403,8 @@ print_success "Service configurations initialized"
 if [ $SKIP_DOCKER -eq 0 ]; then
     print_header "Step 5: Starting Docker Compose Services"
     
-    print_info "This will start all services defined in docker-compose.yml"
+    # Check which service directories exist and are not empty
+    print_step "Checking which services are available..."
     echo ""
     
     # Check if docker-compose.yml exists
@@ -362,12 +413,67 @@ if [ $SKIP_DOCKER -eq 0 ]; then
         exit 1
     fi
     
-    print_step "Starting services..."
+    # Define services and check which ones to start
+    declare -a AVAILABLE_SERVICES=()
+    declare -a UNAVAILABLE_SERVICES=()
+    
+    # MySQL is always available (built-in service, not cloned)
+    AVAILABLE_SERVICES+=("mysql")
+    
+    # Check cloned services
+    if [ -d "$PROJECT_ROOT/services/cts-core" ] && [ -n "$(ls -A "$PROJECT_ROOT/services/cts-core" 2>/dev/null)" ]; then
+        print_success "cts-core: Available"
+        AVAILABLE_SERVICES+=("cts-core")
+    else
+        print_warning "cts-core: Directory empty or missing (skipping)"
+        UNAVAILABLE_SERVICES+=("cts-core")
+    fi
+    
+    if [ -d "$PROJECT_ROOT/services/hsm-service" ] && [ -n "$(ls -A "$PROJECT_ROOT/services/hsm-service" 2>/dev/null)" ]; then
+        print_success "hsm-service: Available"
+        AVAILABLE_SERVICES+=("hsm-service")
+    else
+        print_warning "hsm-service: Directory empty or missing (skipping)"
+        UNAVAILABLE_SERVICES+=("hsm-service")
+    fi
+    
+    if [ -d "$PROJECT_ROOT/services/trader-daemon" ] && [ -n "$(ls -A "$PROJECT_ROOT/services/trader-daemon" 2>/dev/null)" ]; then
+        print_success "trader-daemon: Available"
+        AVAILABLE_SERVICES+=("trader-daemon")
+    else
+        print_warning "trader-daemon: Directory empty or missing (skipping)"
+        UNAVAILABLE_SERVICES+=("trader-daemon")
+    fi
+    
+    if [ -d "$PROJECT_ROOT/services/web-ui-go" ] && [ -n "$(ls -A "$PROJECT_ROOT/services/web-ui-go" 2>/dev/null)" ]; then
+        print_success "web-ui-go: Available"
+        AVAILABLE_SERVICES+=("web-ui-go")
+    else
+        print_warning "web-ui-go: Directory empty or missing (skipping)"
+        UNAVAILABLE_SERVICES+=("web-ui-go")
+    fi
+    
+    echo ""
+    
+    if [ ${#AVAILABLE_SERVICES[@]} -eq 0 ]; then
+        print_error "No services available to start"
+        exit 1
+    fi
+    
+    print_step "Starting services: ${AVAILABLE_SERVICES[*]}"
+    echo ""
     cd "$PROJECT_ROOT"
     
-    if $DOCKER_COMPOSE_CMD up -d; then
+    if $DOCKER_COMPOSE_CMD up -d "${AVAILABLE_SERVICES[@]}"; then
         echo ""
         print_success "Services started successfully!"
+        print_info "Started: ${AVAILABLE_SERVICES[*]}"
+        
+        if [ ${#UNAVAILABLE_SERVICES[@]} -gt 0 ]; then
+            echo ""
+            print_info "Not started (missing): ${UNAVAILABLE_SERVICES[*]}"
+            print_info "To add them, clone their repositories and run again"
+        fi
     else
         echo ""
         print_error "Failed to start services"
@@ -391,7 +497,7 @@ if [ $SKIP_DOCKER -eq 0 ]; then
 else
     print_header "Step 5: Skipping Docker Compose Startup"
     print_info "Services not started"
-    print_info "To start manually: docker compose up -d"
+    print_info "To start manually: docker compose up -d <service-name>"
 fi
 
 # Summary
