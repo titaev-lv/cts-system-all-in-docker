@@ -233,12 +233,17 @@ if [ $SKIP_CLONE -eq 0 ]; then
                 # Create parent directory if needed
                 mkdir -p "$(dirname "$full_path")"
                 
-                if git clone "$repo_url" "$full_path"; then
+                # Remove failed clone attempt if exists
+                rm -rf "$full_path" 2>/dev/null || true
+                
+                if git clone "$repo_url" "$full_path" 2>&1; then
                     print_success "$service_name: Cloned successfully"
                     ((CLONED_COUNT++))
                 else
-                    print_error "Failed to clone $service_name"
+                    CLONE_EXIT=$?
+                    print_error "Failed to clone $service_name (exit code: $CLONE_EXIT)"
                     print_info "URL: $repo_url"
+                    print_info "Check the URL and your network connection"
                 fi
             else
                 # Repository URL not configured
@@ -281,6 +286,8 @@ if [ $SKIP_PKI -eq 0 ]; then
     # Check if PKI scripts exist
     if [ ! -f "$PROJECT_ROOT/scripts/pki/01-generate-ca.sh" ]; then
         print_error "PKI scripts not found in scripts/pki/"
+        print_info "Looking for scripts in: $PROJECT_ROOT/scripts/pki/"
+        ls -la "$PROJECT_ROOT/scripts/pki/" 2>/dev/null || print_warning "scripts/pki/ directory does not exist"
         exit 1
     fi
     
