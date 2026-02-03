@@ -20,7 +20,7 @@
 - **Trader Daemon** - торговые демоны (Phase 1 complete, Phase 2 planned)
 - **Web UI** - административная панель (operational)
 
-## � Предварительные требования
+## Предварительные требования
 
 - Docker 20.10+
 - Docker Compose 2.0+
