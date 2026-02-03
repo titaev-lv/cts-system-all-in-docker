@@ -531,6 +531,31 @@ if [ $SKIP_DOCKER -eq 0 ]; then
             print_info "To initialize database later, run:"
             echo "  docker compose exec mysql mysql -u root -p < volumes/mysql-dump/init.sql"
         fi
+        
+        # Create database users and grant privileges
+        print_step "Creating database users..."
+        
+        # Create cts-core user
+        if $DOCKER_COMPOSE_CMD exec -T mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" -e \
+            "CREATE USER IF NOT EXISTS 'cts-core'@'%' IDENTIFIED BY 'cts-core'; \
+             GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE:-ct_system}.* TO 'cts-core'@'%'; \
+             FLUSH PRIVILEGES;" &>/dev/null; then
+            print_success "User 'cts-core' created with full privileges on ${MYSQL_DATABASE:-ct_system}"
+        else
+            print_error "Failed to create user 'cts-core'"
+            exit 1
+        fi
+        
+        # Create cts-web user
+        if $DOCKER_COMPOSE_CMD exec -T mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" -e \
+            "CREATE USER IF NOT EXISTS 'cts-web'@'%' IDENTIFIED BY 'cts-web'; \
+             GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE:-ct_system}.* TO 'cts-web'@'%'; \
+             FLUSH PRIVILEGES;" &>/dev/null; then
+            print_success "User 'cts-web' created with full privileges on ${MYSQL_DATABASE:-ct_system}"
+        else
+            print_error "Failed to create user 'cts-web'"
+            exit 1
+        fi
     fi
     
     # Check service health
