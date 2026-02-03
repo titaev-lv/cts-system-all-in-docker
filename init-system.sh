@@ -227,7 +227,7 @@ if [ $SKIP_CLONE -eq 0 ]; then
             else
                 print_warning "$service_name: Directory exists with content (not a git repo)"
             fi
-            ((SKIPPED_COUNT++))
+            SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
         else
             # Service directory doesn't exist or is empty
             if [ -n "$repo_url" ]; then
@@ -248,7 +248,7 @@ if [ $SKIP_CLONE -eq 0 ]; then
                 
                 if [ $CLONE_EXIT -eq 0 ]; then
                     print_success "$service_name: Cloned successfully"
-                    ((CLONED_COUNT++))
+                    CLONED_COUNT=$((CLONED_COUNT + 1))
                 else
                     print_error "Failed to clone $service_name (exit code: $CLONE_EXIT)"
                     print_info "URL: $repo_url"
