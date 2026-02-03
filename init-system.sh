@@ -240,11 +240,16 @@ if [ $SKIP_CLONE -eq 0 ]; then
                 # Remove failed clone attempt if exists
                 rm -rf "$full_path" 2>/dev/null || true
                 
-                if git clone "$repo_url" "$full_path" >/dev/null 2>&1; then
+                # Clone repository
+                set +e
+                git clone "$repo_url" "$full_path" >/dev/null 2>&1
+                CLONE_EXIT=$?
+                set -e
+                
+                if [ $CLONE_EXIT -eq 0 ]; then
                     print_success "$service_name: Cloned successfully"
                     ((CLONED_COUNT++))
                 else
-                    CLONE_EXIT=$?
                     print_error "Failed to clone $service_name (exit code: $CLONE_EXIT)"
                     print_info "URL: $repo_url"
                     print_info "Check the URL and your network connection"
