@@ -24,9 +24,13 @@ BLUE='\033[0;34m'
 MAGENTA='\033[0;35m'
 NC='\033[0m' # No Color
 
+# Error handler
+trap 'echo ""; print_error "Script failed at line $LINENO"; exit 1' ERR
+
 # Script configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$SCRIPT_DIR"
+DOCKER_COMPOSE_CMD=""
 
 # Parse arguments
 SKIP_CLONE=0
