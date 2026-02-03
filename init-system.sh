@@ -240,7 +240,7 @@ if [ $SKIP_CLONE -eq 0 ]; then
                 # Remove failed clone attempt if exists
                 rm -rf "$full_path" 2>/dev/null || true
                 
-                if git clone "$repo_url" "$full_path" 2>&1; then
+                if git clone "$repo_url" "$full_path" >/dev/null 2>&1; then
                     print_success "$service_name: Cloned successfully"
                     ((CLONED_COUNT++))
                 else
