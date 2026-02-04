@@ -527,6 +527,20 @@ if [ $SKIP_DOCKER -eq 0 ]; then
         exit 1
     fi
     
+    # Clean Docker cache before starting
+    print_step "Cleaning Docker cache..."
+    set +e
+    docker system prune -f >/dev/null 2>&1
+    PRUNE_EXIT=$?
+    set -e
+    
+    if [ $PRUNE_EXIT -eq 0 ]; then
+        print_success "Docker cache cleaned"
+    else
+        print_warning "Docker cache cleanup returned exit code $PRUNE_EXIT (continuing anyway)"
+    fi
+    
+    echo ""
     print_step "Starting services: ${AVAILABLE_SERVICES[*]}"
     echo ""
     cd "$PROJECT_ROOT"
@@ -578,19 +592,31 @@ if [ $SKIP_DOCKER -eq 0 ]; then
             
             # Create database
             print_step "Creating database cts-system..."
-            if $DOCKER_COMPOSE_CMD exec -T mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" -e "CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE:-ct_system} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" &>/dev/null; then
+            set +e
+            CREATE_DB_OUTPUT=$($DOCKER_COMPOSE_CMD exec -T mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" -e "CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE:-ct_system} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>&1)
+            CREATE_DB_EXIT=$?
+            set -e
+            
+            if [ $CREATE_DB_EXIT -eq 0 ]; then
                 print_success "Database created"
             else
                 print_error "Failed to create database"
+                print_info "Error: $CREATE_DB_OUTPUT"
                 exit 1
             fi
             
             # Load initial data
             print_step "Loading initial data from init.sql..."
-            if $DOCKER_COMPOSE_CMD exec -T mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" "${MYSQL_DATABASE:-ct_system}" < "$INIT_SQL_FILE" &>/dev/null; then
+            set +e
+            LOAD_DATA_OUTPUT=$($DOCKER_COMPOSE_CMD exec -T mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" "${MYSQL_DATABASE:-ct_system}" < "$INIT_SQL_FILE" 2>&1)
+            LOAD_DATA_EXIT=$?
+            set -e
+            
+            if [ $LOAD_DATA_EXIT -eq 0 ]; then
                 print_success "Initial data loaded successfully"
             else
                 print_error "Failed to load initial data"
+                print_info "Error: $LOAD_DATA_OUTPUT"
                 exit 1
             fi
         else
@@ -603,25 +629,33 @@ if [ $SKIP_DOCKER -eq 0 ]; then
         print_step "Creating database users..."
         
         # Create cts-core user
-        if $DOCKER_COMPOSE_CMD exec -T mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" -e \
+        set +e
+        CREATE_USER_OUTPUT=$($DOCKER_COMPOSE_CMD exec -T mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" -e \
             "CREATE USER IF NOT EXISTS 'cts-core'@'%' IDENTIFIED BY 'cts-core'; \
              GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE:-ct_system}.* TO 'cts-core'@'%'; \
-             FLUSH PRIVILEGES;" &>/dev/null; then
+             FLUSH PRIVILEGES;" 2>&1)
+        CREATE_USER_EXIT=$?
+        set -e
+        
+        if [ $CREATE_USER_EXIT -eq 0 ]; then
             print_success "User 'cts-core' created with full privileges on ${MYSQL_DATABASE:-ct_system}"
         else
-            print_error "Failed to create user 'cts-core'"
-            exit 1
+            print_warning "User 'cts-core' setup: $CREATE_USER_OUTPUT"
         fi
         
         # Create cts-web user
-        if $DOCKER_COMPOSE_CMD exec -T mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" -e \
+        set +e
+        CREATE_WEB_OUTPUT=$($DOCKER_COMPOSE_CMD exec -T mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" -e \
             "CREATE USER IF NOT EXISTS 'cts-web'@'%' IDENTIFIED BY 'cts-web'; \
              GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE:-ct_system}.* TO 'cts-web'@'%'; \
-             FLUSH PRIVILEGES;" &>/dev/null; then
+             FLUSH PRIVILEGES;" 2>&1)
+        CREATE_WEB_EXIT=$?
+        set -e
+        
+        if [ $CREATE_WEB_EXIT -eq 0 ]; then
             print_success "User 'cts-web' created with full privileges on ${MYSQL_DATABASE:-ct_system}"
         else
-            print_error "Failed to create user 'cts-web'"
-            exit 1
+            print_warning "User 'cts-web' setup: $CREATE_WEB_OUTPUT"
         fi
     fi
     
