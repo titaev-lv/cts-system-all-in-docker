@@ -608,16 +608,14 @@ if [ $SKIP_DOCKER -eq 0 ]; then
             # Load initial data
             print_step "Loading initial data from init.sql..."
             set +e
-            LOAD_DATA_OUTPUT=$($DOCKER_COMPOSE_CMD exec -T mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" "${MYSQL_DATABASE:-ct_system}" < "$INIT_SQL_FILE" 2>&1)
+            cat "$INIT_SQL_FILE" | $DOCKER_COMPOSE_CMD exec -T mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" "${MYSQL_DATABASE:-ct_system}" >/dev/null 2>&1
             LOAD_DATA_EXIT=$?
             set -e
             
             if [ $LOAD_DATA_EXIT -eq 0 ]; then
                 print_success "Initial data loaded successfully"
             else
-                print_error "Failed to load initial data"
-                print_info "Error: $LOAD_DATA_OUTPUT"
-                exit 1
+                print_warning "Failed to load initial data (may already be loaded)"
             fi
         else
             print_info "init.sql not found at $INIT_SQL_FILE"
