@@ -544,24 +544,28 @@ if [ $SKIP_DOCKER -eq 0 ]; then
     
     # Check if any services need to be built
     print_step "Checking if services need to be built..."
-    NEEDS_BUILD=0
+    declare -a SERVICES_TO_BUILD=()
     
     for service in "${AVAILABLE_SERVICES[@]}"; do
-        if [ -d "$PROJECT_ROOT/services/$service" ] && [ -f "$PROJECT_ROOT/services/$service/Dockerfile" ]; then
+        # Check for Dockerfile in services directory
+        if [ -f "$PROJECT_ROOT/services/$service/Dockerfile" ]; then
             print_info "$service: Found Dockerfile (build required)"
-            NEEDS_BUILD=1
-        elif [ "$service" == "mysql" ] && [ -f "$PROJECT_ROOT/services/mysql/Dockerfile" ]; then
+            SERVICES_TO_BUILD+=("$service")
+        # Also check MySQL separately since it's in services/mysql
+        elif [ "$service" = "mysql" ] && [ -f "$PROJECT_ROOT/services/mysql/Dockerfile" ]; then
             print_info "$service: Found Dockerfile (build required)"
-            NEEDS_BUILD=1
+            SERVICES_TO_BUILD+=("$service")
+        else
+            print_info "$service: No Dockerfile found (using pre-built image)"
         fi
     done
     
-    if [ $NEEDS_BUILD -eq 1 ]; then
+    if [ ${#SERVICES_TO_BUILD[@]} -gt 0 ]; then
         echo ""
-        print_step "Building Docker images..."
+        print_step "Building Docker images: ${SERVICES_TO_BUILD[*]}"
         cd "$PROJECT_ROOT"
         
-        if $DOCKER_COMPOSE_CMD build --no-cache "${AVAILABLE_SERVICES[@]}"; then
+        if $DOCKER_COMPOSE_CMD build --no-cache "${SERVICES_TO_BUILD[@]}"; then
             echo ""
             print_success "Docker images built successfully"
         else
