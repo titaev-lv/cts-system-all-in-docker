@@ -433,37 +433,64 @@ if [ $SKIP_DOCKER -eq 0 ]; then
     declare -a AVAILABLE_SERVICES=()
     declare -a UNAVAILABLE_SERVICES=()
     
+    # Get list of services from docker-compose.yml
+    set +e
+    COMPOSE_SERVICES=$($DOCKER_COMPOSE_CMD config --services 2>/dev/null)
+    set -e
+    
     # MySQL is always available (built-in service, not cloned)
-    AVAILABLE_SERVICES+=("mysql")
+    if echo "$COMPOSE_SERVICES" | grep -q "^mysql$"; then
+        AVAILABLE_SERVICES+=("mysql")
+    fi
     
     # Check cloned services
     if [ -d "$PROJECT_ROOT/services/cts-core" ] && [ -n "$(ls -A "$PROJECT_ROOT/services/cts-core" 2>/dev/null)" ]; then
-        print_success "cts-core: Available"
-        AVAILABLE_SERVICES+=("cts-core")
+        if echo "$COMPOSE_SERVICES" | grep -q "^cts-core$"; then
+            print_success "cts-core: Available"
+            AVAILABLE_SERVICES+=("cts-core")
+        else
+            print_warning "cts-core: Directory exists but not in docker-compose.yml (skipping)"
+            UNAVAILABLE_SERVICES+=("cts-core")
+        fi
     else
         print_warning "cts-core: Directory empty or missing (skipping)"
         UNAVAILABLE_SERVICES+=("cts-core")
     fi
     
     if [ -d "$PROJECT_ROOT/services/hsm-service" ] && [ -n "$(ls -A "$PROJECT_ROOT/services/hsm-service" 2>/dev/null)" ]; then
-        print_success "hsm-service: Available"
-        AVAILABLE_SERVICES+=("hsm-service")
+        if echo "$COMPOSE_SERVICES" | grep -q "^hsm-service$"; then
+            print_success "hsm-service: Available"
+            AVAILABLE_SERVICES+=("hsm-service")
+        else
+            print_warning "hsm-service: Directory exists but not in docker-compose.yml (skipping)"
+            UNAVAILABLE_SERVICES+=("hsm-service")
+        fi
     else
         print_warning "hsm-service: Directory empty or missing (skipping)"
         UNAVAILABLE_SERVICES+=("hsm-service")
     fi
     
     if [ -d "$PROJECT_ROOT/services/trader-daemon" ] && [ -n "$(ls -A "$PROJECT_ROOT/services/trader-daemon" 2>/dev/null)" ]; then
-        print_success "trader-daemon: Available"
-        AVAILABLE_SERVICES+=("trader-daemon")
+        if echo "$COMPOSE_SERVICES" | grep -q "^trader-daemon$"; then
+            print_success "trader-daemon: Available"
+            AVAILABLE_SERVICES+=("trader-daemon")
+        else
+            print_warning "trader-daemon: Directory exists but not in docker-compose.yml (skipping)"
+            UNAVAILABLE_SERVICES+=("trader-daemon")
+        fi
     else
         print_warning "trader-daemon: Directory empty or missing (skipping)"
         UNAVAILABLE_SERVICES+=("trader-daemon")
     fi
     
     if [ -d "$PROJECT_ROOT/services/web-ui-go" ] && [ -n "$(ls -A "$PROJECT_ROOT/services/web-ui-go" 2>/dev/null)" ]; then
-        print_success "web-ui-go: Available"
-        AVAILABLE_SERVICES+=("web-ui-go")
+        if echo "$COMPOSE_SERVICES" | grep -q "^web-ui-go$"; then
+            print_success "web-ui-go: Available"
+            AVAILABLE_SERVICES+=("web-ui-go")
+        else
+            print_warning "web-ui-go: Directory exists but not in docker-compose.yml (skipping)"
+            UNAVAILABLE_SERVICES+=("web-ui-go")
+        fi
     else
         print_warning "web-ui-go: Directory empty or missing (skipping)"
         UNAVAILABLE_SERVICES+=("web-ui-go")
