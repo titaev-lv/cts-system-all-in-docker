@@ -486,16 +486,16 @@ if [ $SKIP_DOCKER -eq 0 ]; then
     fi
     
     if [ -d "$PROJECT_ROOT/services/hsm-service" ] && [ -n "$(ls -A "$PROJECT_ROOT/services/hsm-service" 2>/dev/null)" ]; then
-        if is_service_enabled "hsm-service"; then
+        if is_service_enabled "hsm"; then
             print_success "hsm-service: Available"
-            AVAILABLE_SERVICES+=("hsm-service")
+            AVAILABLE_SERVICES+=("hsm")
         else
             print_warning "hsm-service: Directory exists but not enabled in docker-compose.yml (skipping)"
-            UNAVAILABLE_SERVICES+=("hsm-service")
+            UNAVAILABLE_SERVICES+=("hsm")
         fi
     else
         print_warning "hsm-service: Directory empty or missing (skipping)"
-        UNAVAILABLE_SERVICES+=("hsm-service")
+        UNAVAILABLE_SERVICES+=("hsm")
     fi
     
     if [ -d "$PROJECT_ROOT/services/trader-daemon" ] && [ -n "$(ls -A "$PROJECT_ROOT/services/trader-daemon" 2>/dev/null)" ]; then
@@ -556,18 +556,15 @@ if [ $SKIP_DOCKER -eq 0 ]; then
         DOCKERFILE_PATH="$PROJECT_ROOT/services/$service/Dockerfile"
         MYSQL_DOCKERFILE_PATH="$PROJECT_ROOT/services/mysql/Dockerfile"
         
-        print_info "Checking $service..."
-        print_info "  Path 1: $DOCKERFILE_PATH (exists: $([ -f "$DOCKERFILE_PATH" ] && echo 'YES' || echo 'NO'))"
-        
-        if [ "$service" = "mysql" ]; then
-            print_info "  Path 2 (mysql): $MYSQL_DOCKERFILE_PATH (exists: $([ -f "$MYSQL_DOCKERFILE_PATH" ] && echo 'YES' || echo 'NO'))"
+        # Handle special case where service name differs from directory name
+        if [ "$service" = "hsm" ]; then
+            DOCKERFILE_PATH="$PROJECT_ROOT/services/hsm-service/Dockerfile"
         fi
         
-        if [ -f "$PROJECT_ROOT/services/$service/Dockerfile" ]; then
-            print_info "$service: Found Dockerfile (build required)"
-            SERVICES_TO_BUILD+=("$service")
-        # Also check MySQL separately since it's in services/mysql
-        elif [ "$service" = "mysql" ] && [ -f "$PROJECT_ROOT/services/mysql/Dockerfile" ]; then
+        print_info "Checking $service..."
+        print_info "  Path: $DOCKERFILE_PATH (exists: $([ -f "$DOCKERFILE_PATH" ] && echo 'YES' || echo 'NO'))"
+        
+        if [ -f "$DOCKERFILE_PATH" ]; then
             print_info "$service: Found Dockerfile (build required)"
             SERVICES_TO_BUILD+=("$service")
         else
