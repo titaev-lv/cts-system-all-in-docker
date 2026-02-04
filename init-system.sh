@@ -436,20 +436,44 @@ if [ $SKIP_DOCKER -eq 0 ]; then
     # Get list of services from docker-compose.yml
     set +e
     COMPOSE_SERVICES=$($DOCKER_COMPOSE_CMD config --services 2>/dev/null)
+    COMPOSE_CONFIG_EXIT=$?
     set -e
     
+    if [ $COMPOSE_CONFIG_EXIT -ne 0 ]; then
+        print_warning "Could not read services from docker-compose.yml, will assume services exist"
+        print_info "Trying to get services directly from compose file..."
+        # Fallback: just try to start what we have
+        COMPOSE_SERVICES=""
+    fi
+    
+    if [ -n "$COMPOSE_SERVICES" ]; then
+        print_info "Available services in docker-compose.yml:"
+        echo "$COMPOSE_SERVICES" | sed 's/^/  • /'
+    fi
+    
+    # Helper function to check if service is in compose
+    is_service_enabled() {
+        local service_name=$1
+        if [ -z "$COMPOSE_SERVICES" ]; then
+            # Fallback: assume service is enabled if docker-compose has it
+            # We'll let docker-compose report the error if it doesn't exist
+            return 0
+        fi
+        echo "$COMPOSE_SERVICES" | grep -q "^${service_name}$"
+    }
+    
     # MySQL is always available (built-in service, not cloned)
-    if echo "$COMPOSE_SERVICES" | grep -q "^mysql$"; then
+    if is_service_enabled "mysql"; then
         AVAILABLE_SERVICES+=("mysql")
     fi
     
     # Check cloned services
     if [ -d "$PROJECT_ROOT/services/cts-core" ] && [ -n "$(ls -A "$PROJECT_ROOT/services/cts-core" 2>/dev/null)" ]; then
-        if echo "$COMPOSE_SERVICES" | grep -q "^cts-core$"; then
+        if is_service_enabled "cts-core"; then
             print_success "cts-core: Available"
             AVAILABLE_SERVICES+=("cts-core")
         else
-            print_warning "cts-core: Directory exists but not in docker-compose.yml (skipping)"
+            print_warning "cts-core: Directory exists but not enabled in docker-compose.yml (skipping)"
             UNAVAILABLE_SERVICES+=("cts-core")
         fi
     else
@@ -458,11 +482,11 @@ if [ $SKIP_DOCKER -eq 0 ]; then
     fi
     
     if [ -d "$PROJECT_ROOT/services/hsm-service" ] && [ -n "$(ls -A "$PROJECT_ROOT/services/hsm-service" 2>/dev/null)" ]; then
-        if echo "$COMPOSE_SERVICES" | grep -q "^hsm-service$"; then
+        if is_service_enabled "hsm-service"; then
             print_success "hsm-service: Available"
             AVAILABLE_SERVICES+=("hsm-service")
         else
-            print_warning "hsm-service: Directory exists but not in docker-compose.yml (skipping)"
+            print_warning "hsm-service: Directory exists but not enabled in docker-compose.yml (skipping)"
             UNAVAILABLE_SERVICES+=("hsm-service")
         fi
     else
@@ -471,11 +495,11 @@ if [ $SKIP_DOCKER -eq 0 ]; then
     fi
     
     if [ -d "$PROJECT_ROOT/services/trader-daemon" ] && [ -n "$(ls -A "$PROJECT_ROOT/services/trader-daemon" 2>/dev/null)" ]; then
-        if echo "$COMPOSE_SERVICES" | grep -q "^trader-daemon$"; then
+        if is_service_enabled "trader-daemon"; then
             print_success "trader-daemon: Available"
             AVAILABLE_SERVICES+=("trader-daemon")
         else
-            print_warning "trader-daemon: Directory exists but not in docker-compose.yml (skipping)"
+            print_warning "trader-daemon: Directory exists but not enabled in docker-compose.yml (skipping)"
             UNAVAILABLE_SERVICES+=("trader-daemon")
         fi
     else
@@ -484,11 +508,11 @@ if [ $SKIP_DOCKER -eq 0 ]; then
     fi
     
     if [ -d "$PROJECT_ROOT/services/web-ui-go" ] && [ -n "$(ls -A "$PROJECT_ROOT/services/web-ui-go" 2>/dev/null)" ]; then
-        if echo "$COMPOSE_SERVICES" | grep -q "^web-ui-go$"; then
+        if is_service_enabled "web-ui-go"; then
             print_success "web-ui-go: Available"
             AVAILABLE_SERVICES+=("web-ui-go")
         else
-            print_warning "web-ui-go: Directory exists but not in docker-compose.yml (skipping)"
+            print_warning "web-ui-go: Directory exists but not enabled in docker-compose.yml (skipping)"
             UNAVAILABLE_SERVICES+=("web-ui-go")
         fi
     else
