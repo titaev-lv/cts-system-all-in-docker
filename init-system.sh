@@ -414,11 +414,11 @@ fi
 
 if [ -d "$PROJECT_ROOT/services/web-ui-go" ] && [ -f "$PROJECT_ROOT/services/web-ui-go/config/config.example.yaml" ]; then
     if [ ! -f "$PROJECT_ROOT/services/web-ui-go/config/config.yaml" ]; then
-        print_step "Creating web-ui config from example..."
+        print_step "Creating web-ui-go config from example..."
         cp "$PROJECT_ROOT/services/web-ui-go/config/config.example.yaml" "$PROJECT_ROOT/services/web-ui-go/config/config.yaml"
-        print_success "web-ui config created"
+        print_success "web-ui-go config created"
     else
-        print_info "web-ui config already exists"
+        print_info "web-ui-go config already exists"
     fi
 fi
 
