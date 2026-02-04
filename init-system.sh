@@ -439,6 +439,10 @@ if [ $SKIP_DOCKER -eq 0 ]; then
     COMPOSE_CONFIG_EXIT=$?
     set -e
     
+    print_info "Debug: COMPOSE_CONFIG_EXIT=$COMPOSE_CONFIG_EXIT"
+    print_info "Debug: COMPOSE_SERVICES='$COMPOSE_SERVICES'"
+    print_info "Debug: COMPOSE_SERVICES length=${#COMPOSE_SERVICES}"
+    
     if [ $COMPOSE_CONFIG_EXIT -ne 0 ]; then
         print_warning "Could not read services from docker-compose.yml, will assume services exist"
         print_info "Trying to get services directly from compose file..."
