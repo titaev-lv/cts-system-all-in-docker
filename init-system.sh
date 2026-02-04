@@ -240,14 +240,14 @@ if [ $SKIP_CLONE -eq 0 ]; then
                 # Remove failed clone attempt if exists
                 rm -rf "$full_path" 2>/dev/null || true
                 
-                # Clone repository
+                # Clone repository with progress
                 set +e
-                git clone "$repo_url" "$full_path" >/dev/null 2>&1
-                CLONE_EXIT=$?
+                git clone --progress "$repo_url" "$full_path" 2>&1 | sed 's/^/  /'
+                CLONE_EXIT=${PIPESTATUS[0]}
                 set -e
                 
                 if [ $CLONE_EXIT -eq 0 ]; then
-                    print_success "$service_name: Cloned successfully"
+                    print_success "$service_name: Cloned successfully ($(du -sh "$full_path" 2>/dev/null | cut -f1))"
                     CLONED_COUNT=$((CLONED_COUNT + 1))
                 else
                     print_error "Failed to clone $service_name (exit code: $CLONE_EXIT)"
