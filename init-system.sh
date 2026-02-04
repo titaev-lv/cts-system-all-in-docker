@@ -544,10 +544,21 @@ if [ $SKIP_DOCKER -eq 0 ]; then
     
     # Check if any services need to be built
     print_step "Checking if services need to be built..."
+    print_info "Available services: ${AVAILABLE_SERVICES[*]}"
     declare -a SERVICES_TO_BUILD=()
     
     for service in "${AVAILABLE_SERVICES[@]}"; do
         # Check for Dockerfile in services directory
+        DOCKERFILE_PATH="$PROJECT_ROOT/services/$service/Dockerfile"
+        MYSQL_DOCKERFILE_PATH="$PROJECT_ROOT/services/mysql/Dockerfile"
+        
+        print_info "Checking $service..."
+        print_info "  Path 1: $DOCKERFILE_PATH (exists: $([ -f "$DOCKERFILE_PATH" ] && echo 'YES' || echo 'NO'))"
+        
+        if [ "$service" = "mysql" ]; then
+            print_info "  Path 2 (mysql): $MYSQL_DOCKERFILE_PATH (exists: $([ -f "$MYSQL_DOCKERFILE_PATH" ] && echo 'YES' || echo 'NO'))"
+        fi
+        
         if [ -f "$PROJECT_ROOT/services/$service/Dockerfile" ]; then
             print_info "$service: Found Dockerfile (build required)"
             SERVICES_TO_BUILD+=("$service")
@@ -562,6 +573,8 @@ if [ $SKIP_DOCKER -eq 0 ]; then
     
     if [ ${#SERVICES_TO_BUILD[@]} -gt 0 ]; then
         echo ""
+        print_step "Services to build: ${SERVICES_TO_BUILD[*]} (count: ${#SERVICES_TO_BUILD[@]})"
+        echo ""
         print_step "Building Docker images: ${SERVICES_TO_BUILD[*]}"
         cd "$PROJECT_ROOT"
         
@@ -573,6 +586,8 @@ if [ $SKIP_DOCKER -eq 0 ]; then
             print_error "Failed to build Docker images"
             exit 1
         fi
+    else
+        print_info "No services need to be built"
     fi
     
     echo ""
