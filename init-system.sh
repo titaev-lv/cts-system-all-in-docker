@@ -541,6 +541,37 @@ if [ $SKIP_DOCKER -eq 0 ]; then
     fi
     
     echo ""
+    
+    # Check if any services need to be built
+    print_step "Checking if services need to be built..."
+    NEEDS_BUILD=0
+    
+    for service in "${AVAILABLE_SERVICES[@]}"; do
+        if [ -d "$PROJECT_ROOT/services/$service" ] && [ -f "$PROJECT_ROOT/services/$service/Dockerfile" ]; then
+            print_info "$service: Found Dockerfile (build required)"
+            NEEDS_BUILD=1
+        elif [ "$service" == "mysql" ] && [ -f "$PROJECT_ROOT/services/mysql/Dockerfile" ]; then
+            print_info "$service: Found Dockerfile (build required)"
+            NEEDS_BUILD=1
+        fi
+    done
+    
+    if [ $NEEDS_BUILD -eq 1 ]; then
+        echo ""
+        print_step "Building Docker images..."
+        cd "$PROJECT_ROOT"
+        
+        if $DOCKER_COMPOSE_CMD build --no-cache "${AVAILABLE_SERVICES[@]}"; then
+            echo ""
+            print_success "Docker images built successfully"
+        else
+            echo ""
+            print_error "Failed to build Docker images"
+            exit 1
+        fi
+    fi
+    
+    echo ""
     print_step "Starting services: ${AVAILABLE_SERVICES[*]}"
     echo ""
     cd "$PROJECT_ROOT"
