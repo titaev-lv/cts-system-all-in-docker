@@ -402,6 +402,16 @@ if [ -d "$PROJECT_ROOT/services/trader-daemon" ] && [ -f "$PROJECT_ROOT/services
     fi
 fi
 
+if [ -d "$PROJECT_ROOT/services/hsm-service" ] && [ -f "$PROJECT_ROOT/services/hsm-service/metadata.yaml.example" ]; then
+    if [ ! -f "$PROJECT_ROOT/services/hsm-service/metadata.yaml" ]; then
+        print_step "Creating hsm-service metadata from example..."
+        cp "$PROJECT_ROOT/services/hsm-service/metadata.yaml.example" "$PROJECT_ROOT/services/hsm-service/metadata.yaml"
+        print_success "hsm-service metadata created"
+    else
+        print_info "hsm-service metadata already exists"
+    fi
+fi
+
 if [ -d "$PROJECT_ROOT/services/web-ui-go" ] && [ -f "$PROJECT_ROOT/services/web-ui-go/config/config.example.yaml" ]; then
     if [ ! -f "$PROJECT_ROOT/services/web-ui-go/config/config.yaml" ]; then
         print_step "Creating web-ui config from example..."

@@ -43,7 +43,6 @@ services:
     container_name: ct-system-hsm
     volumes:
       - ./services/hsm-service/config.yaml:/app/config.yaml:ro
-      - ./services/hsm-service/metadata.yaml:/app/metadata.yaml:ro
       - ./volumes/pki/ca/ca.crt:/app/pki/ca/ca.crt:ro
       - ./volumes/pki/hsm-service/server/hsm-service.crt:/app/pki/server/hsm-service.crt:ro
       - ./volumes/pki/hsm-service/server/hsm-service.key:/app/pki/server/hsm-service.key:ro
