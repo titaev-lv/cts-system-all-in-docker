@@ -449,10 +449,6 @@ if [ $SKIP_DOCKER -eq 0 ]; then
     COMPOSE_CONFIG_EXIT=$?
     set -e
     
-    print_info "Debug: COMPOSE_CONFIG_EXIT=$COMPOSE_CONFIG_EXIT"
-    print_info "Debug: COMPOSE_SERVICES='$COMPOSE_SERVICES'"
-    print_info "Debug: COMPOSE_SERVICES length=${#COMPOSE_SERVICES}"
-    
     if [ $COMPOSE_CONFIG_EXIT -ne 0 ]; then
         print_warning "Could not read services from docker-compose.yml, will assume services exist"
         print_info "Trying to get services directly from compose file..."
@@ -558,21 +554,16 @@ if [ $SKIP_DOCKER -eq 0 ]; then
     
     # Check if any services need to be built
     print_step "Checking if services need to be built..."
-    print_info "Available services: ${AVAILABLE_SERVICES[*]}"
     declare -a SERVICES_TO_BUILD=()
     
     for service in "${AVAILABLE_SERVICES[@]}"; do
         # Check for Dockerfile in services directory
         DOCKERFILE_PATH="$PROJECT_ROOT/services/$service/Dockerfile"
-        MYSQL_DOCKERFILE_PATH="$PROJECT_ROOT/services/mysql/Dockerfile"
         
         # Handle special case where service name differs from directory name
         if [ "$service" = "hsm" ]; then
             DOCKERFILE_PATH="$PROJECT_ROOT/services/hsm-service/Dockerfile"
         fi
-        
-        print_info "Checking $service..."
-        print_info "  Path: $DOCKERFILE_PATH (exists: $([ -f "$DOCKERFILE_PATH" ] && echo 'YES' || echo 'NO'))"
         
         if [ -f "$DOCKERFILE_PATH" ]; then
             print_info "$service: Found Dockerfile (build required)"
@@ -583,8 +574,6 @@ if [ $SKIP_DOCKER -eq 0 ]; then
     done
     
     if [ ${#SERVICES_TO_BUILD[@]} -gt 0 ]; then
-        echo ""
-        print_step "Services to build: ${SERVICES_TO_BUILD[*]} (count: ${#SERVICES_TO_BUILD[@]})"
         echo ""
         print_step "Building Docker images: ${SERVICES_TO_BUILD[*]}"
         cd "$PROJECT_ROOT"
@@ -654,7 +643,10 @@ if [ $SKIP_DOCKER -eq 0 ]; then
             # Create database
             print_step "Creating database cts-system..."
             set +e
-            CREATE_DB_OUTPUT=$($DOCKER_COMPOSE_CMD exec -T mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" -e "CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE:-ct_system} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>&1)
+            CREATE_DB_OUTPUT=$($DOCKER_COMPOSE_CMD exec -T mysql mysql \
+                -u root \
+                -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" \
+                -e "CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE:-ct_system} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>&1)
             CREATE_DB_EXIT=$?
             set -e
             
@@ -669,7 +661,10 @@ if [ $SKIP_DOCKER -eq 0 ]; then
             # Load initial data
             print_step "Loading initial data from init.sql..."
             set +e
-            cat "$INIT_SQL_FILE" | $DOCKER_COMPOSE_CMD exec -T mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" "${MYSQL_DATABASE:-ct_system}" >/dev/null 2>&1
+            cat "$INIT_SQL_FILE" | $DOCKER_COMPOSE_CMD exec -T mysql mysql \
+                -u root \
+                -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" \
+                "${MYSQL_DATABASE:-ct_system}" >/dev/null 2>&1
             LOAD_DATA_EXIT=$?
             set -e
             
@@ -689,10 +684,12 @@ if [ $SKIP_DOCKER -eq 0 ]; then
         
         # Create cts-core user
         set +e
-        CREATE_USER_OUTPUT=$($DOCKER_COMPOSE_CMD exec -T mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" -e \
-            "CREATE USER IF NOT EXISTS 'cts-core'@'%' IDENTIFIED BY 'cts-core'; \
-             GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE:-ct_system}.* TO 'cts-core'@'%'; \
-             FLUSH PRIVILEGES;" 2>&1)
+        CREATE_USER_OUTPUT=$($DOCKER_COMPOSE_CMD exec -T mysql mysql \
+            -u root \
+            -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" \
+            -e "CREATE USER IF NOT EXISTS 'cts-core'@'%' IDENTIFIED BY 'cts-core'; \
+                GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE:-ct_system}.* TO 'cts-core'@'%'; \
+                FLUSH PRIVILEGES;" 2>&1)
         CREATE_USER_EXIT=$?
         set -e
         
@@ -704,10 +701,12 @@ if [ $SKIP_DOCKER -eq 0 ]; then
         
         # Create cts-web user
         set +e
-        CREATE_WEB_OUTPUT=$($DOCKER_COMPOSE_CMD exec -T mysql mysql -u root -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" -e \
-            "CREATE USER IF NOT EXISTS 'cts-web'@'%' IDENTIFIED BY 'cts-web'; \
-             GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE:-ct_system}.* TO 'cts-web'@'%'; \
-             FLUSH PRIVILEGES;" 2>&1)
+        CREATE_WEB_OUTPUT=$($DOCKER_COMPOSE_CMD exec -T mysql mysql \
+            -u root \
+            -p"${MYSQL_ROOT_PASSWORD:-root_dev_password_change_in_production}" \
+            -e "CREATE USER IF NOT EXISTS 'cts-web'@'%' IDENTIFIED BY 'cts-web'; \
+                GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE:-ct_system}.* TO 'cts-web'@'%'; \
+                FLUSH PRIVILEGES;" 2>&1)
         CREATE_WEB_EXIT=$?
         set -e
         
