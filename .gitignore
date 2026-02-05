@@ -28,6 +28,9 @@ services/hsm-service/
 services/trader-daemon/
 services/web-ui-go/
 
+# Исключение: разрешить default revoked.yaml (ACL list)
+!services/hsm-service/revoked.yaml
+
 # MySQL конфиги - разрешить (нет своего git)
 !services/mysql/
 

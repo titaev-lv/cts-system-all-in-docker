@@ -410,6 +410,24 @@ if [ -d "$PROJECT_ROOT/services/hsm-service" ] && [ -f "$PROJECT_ROOT/services/h
     else
         print_info "hsm-service metadata already exists"
     fi
+    
+    if [ ! -f "$PROJECT_ROOT/services/hsm-service/revoked.yaml" ]; then
+        print_step "Creating hsm-service revocation list..."
+        cat > "$PROJECT_ROOT/services/hsm-service/revoked.yaml" << 'EOF'
+# ACL Revocation List
+# List of certificate CNs that have been revoked and should be denied access
+# 
+# Format:
+# revoked_certificates:
+#   - cn: certificate.example.com
+#   - cn: another-cert.example.com
+
+revoked_certificates: []
+EOF
+        print_success "hsm-service revocation list created"
+    else
+        print_info "hsm-service revocation list already exists"
+    fi
 fi
 
 if [ -d "$PROJECT_ROOT/services/web-ui-go" ] && [ -f "$PROJECT_ROOT/services/web-ui-go/config/config.example.yaml" ]; then
