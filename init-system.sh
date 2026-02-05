@@ -611,6 +611,27 @@ if [ $SKIP_DOCKER -eq 0 ]; then
     echo ""
     print_step "Starting services: ${AVAILABLE_SERVICES[*]}"
     echo ""
+    
+    # Ensure revoked.yaml file exists BEFORE docker-compose up (to prevent Docker creating it as directory)
+    if [ -d "$PROJECT_ROOT/services/hsm-service/revoked.yaml" ]; then
+        print_warning "revoked.yaml is a directory, removing and recreating as file..."
+        rm -rf "$PROJECT_ROOT/services/hsm-service/revoked.yaml"
+    fi
+    if [ ! -f "$PROJECT_ROOT/services/hsm-service/revoked.yaml" ]; then
+        cat > "$PROJECT_ROOT/services/hsm-service/revoked.yaml" << 'EOF'
+# ACL Revocation List
+# List of certificate CNs that have been revoked and should be denied access
+# 
+# Format:
+# revoked_certificates:
+#   - cn: certificate.example.com
+#   - cn: another-cert.example.com
+
+revoked_certificates: []
+EOF
+        print_success "Created revoked.yaml"
+    fi
+    
     cd "$PROJECT_ROOT"
     
     if $DOCKER_COMPOSE_CMD up -d "${AVAILABLE_SERVICES[@]}"; then
