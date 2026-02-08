@@ -31,6 +31,7 @@
       "**/volumes/mysql-dump/*": false,
       "**/volumes/hsm-tokens/*": false,
       "services": true
-    }
+    },
+    "makefile.configureOnOpen": false
   }
 }
