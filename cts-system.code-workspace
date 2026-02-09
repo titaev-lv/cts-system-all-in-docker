@@ -13,7 +13,7 @@
       "name": "HSM"
     },
     {
-      "path": "services/trader-daemon",
+      "path": "services/trader",
       "name": "Trader"
     },
     {

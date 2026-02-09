@@ -25,7 +25,7 @@ volumes/hsm-tokens/*
 # Сервисы - игнорировать проекты с кодом (у них свой git)
 services/cts-core/
 services/hsm-service/
-services/trader-daemon/
+services/trader/
 services/web-ui-go/
 
 # Исключение: разрешить default revoked.yaml (ACL list)
