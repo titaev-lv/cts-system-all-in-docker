@@ -203,7 +203,7 @@ if [ $SKIP_CLONE -eq 0 ]; then
     declare -A SERVICES=(
         ["cts-core"]="services/cts-core:CTS_CORE_REPO_URL"
         ["hsm-service"]="services/hsm-service:HSM_SERVICE_REPO_URL"
-        ["trader-daemon"]="services/trader-daemon:TRADER_DAEMON_REPO_URL"
+        ["trader"]="services/trader:TRADER_REPO_URL"
         ["web-ui-go"]="services/web-ui-go:WEB_UI_GO_REPO_URL"
     )
     
@@ -392,13 +392,13 @@ if [ -d "$PROJECT_ROOT/services/hsm-service" ] && [ -f "$PROJECT_ROOT/services/h
     fi
 fi
 
-if [ -d "$PROJECT_ROOT/services/trader-daemon" ] && [ -f "$PROJECT_ROOT/services/trader-daemon/conf/config.example.ini" ]; then
-    if [ ! -f "$PROJECT_ROOT/services/trader-daemon/conf/config.ini" ]; then
-        print_step "Creating trader-daemon config from example..."
-        cp "$PROJECT_ROOT/services/trader-daemon/conf/config.example.ini" "$PROJECT_ROOT/services/trader-daemon/conf/config.ini"
-        print_success "trader-daemon config created"
+if [ -d "$PROJECT_ROOT/services/trader" ] && [ -f "$PROJECT_ROOT/services/trader/conf/config.example.ini" ]; then
+    if [ ! -f "$PROJECT_ROOT/services/trader/conf/config.ini" ]; then
+        print_step "Creating trader config from example..."
+        cp "$PROJECT_ROOT/services/trader/conf/config.example.ini" "$PROJECT_ROOT/services/trader/conf/config.ini"
+        print_success "trader config created"
     else
-        print_info "trader-daemon config already exists"
+        print_info "trader config already exists"
     fi
 fi
 
@@ -522,17 +522,17 @@ if [ $SKIP_DOCKER -eq 0 ]; then
         UNAVAILABLE_SERVICES+=("hsm")
     fi
     
-    if [ -d "$PROJECT_ROOT/services/trader-daemon" ] && [ -n "$(ls -A "$PROJECT_ROOT/services/trader-daemon" 2>/dev/null)" ]; then
-        if is_service_enabled "trader-daemon"; then
-            print_success "trader-daemon: Available"
-            AVAILABLE_SERVICES+=("trader-daemon")
+    if [ -d "$PROJECT_ROOT/services/trader" ] && [ -n "$(ls -A "$PROJECT_ROOT/services/trader" 2>/dev/null)" ]; then
+        if is_service_enabled "trader"; then
+            print_success "trader: Available"
+            AVAILABLE_SERVICES+=("trader")
         else
-            print_warning "trader-daemon: Directory exists but not enabled in docker-compose.yml (skipping)"
-            UNAVAILABLE_SERVICES+=("trader-daemon")
+            print_warning "trader: Directory exists but not enabled in docker-compose.yml (skipping)"
+            UNAVAILABLE_SERVICES+=("trader")
         fi
     else
-        print_warning "trader-daemon: Directory empty or missing (skipping)"
-        UNAVAILABLE_SERVICES+=("trader-daemon")
+        print_warning "trader: Directory empty or missing (skipping)"
+        UNAVAILABLE_SERVICES+=("trader")
     fi
     
     if [ -d "$PROJECT_ROOT/services/web-ui-go" ] && [ -n "$(ls -A "$PROJECT_ROOT/services/web-ui-go" 2>/dev/null)" ]; then
