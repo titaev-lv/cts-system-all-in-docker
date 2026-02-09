@@ -43,10 +43,10 @@
 - 🟡 Предложения: объединение CLI, multi-slot architecture
 
 **Web UI (Go):**
-- ✅ Operational (authentication, user/group management, exchanges)
-- ✅ Phase 4.1: Position analytics API (P&L calculations, user analytics)
-- ⏳ Phase 4.2+: Real-time updates, WebSocket integration, live price feeds
-- 🟡 Миграция на slog (опционально, сейчас использует zerolog)
+- ✅ Recovered core: authentication, users/groups, exchanges, exchange accounts
+- 🔴 Missing in recovered code: positions, market analysis, daemon, coins
+- ⏳ Phase 4.1 analytics: not implemented in recovered code
+- 🔴 Миграция логирования на slog (обязательно, равнение на hsm-service)
 
 ---
 
@@ -75,13 +75,11 @@
 
 **Решение:**
 - ✅ **Эталон**: HSM Service (slog + JSON + stdout + file + lumberjack)
-- 🔧 **Исправить**: CTS-Core, Trader (добавить MultiWriter с stdout)
-- 🔧 **Опционально**: Web UI перевести на slog (убрать зависимость от zerolog)
+- 🔧 **Исправить**: CTS-Core, Trader (stdout + JSON + lumberjack)
+- 🔧 **Обязательно**: Web UI перевести на slog (убрать zerolog, единый JSON)
   - **Текущее состояние Web UI**: zerolog с text format + stdout + file
-  - **Конфигурация**: YAML (logging.output: "both")
-  - **Работает корректно**: ✅ логи видны в docker logs
-  - **Причина миграции**: единообразие с остальными сервисами, JSON формат
-  - **Приоритет**: LOW (работает, но желательно унифицировать)
+  - **Цель**: slog + JSON + stdout + file + lumberjack (как в HSM)
+  - **Приоритет**: HIGH (первая задача стандартизации)
 
 **Задачи:**
 ```
@@ -89,7 +87,7 @@
 [ ] CTS-Core: Переключить на JSON формат (slog.NewJSONHandler)
 [ ] CTS-Core: Использовать lumberjack вместо кастомного rotatedFile
 [ ] Trader: Аналогично CTS-Core (stdout + JSON + lumberjack)
-[ ] Web UI: Оценить целесообразность миграции на slog
+[ ] Web UI: Миграция на slog (JSON + stdout + file + lumberjack)
 [ ] Тестирование: Проверить docker logs для всех сервисов
 [ ] Документация: Обновить FIX_LOGGING_QUICK.md
 ```
