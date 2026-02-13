@@ -50,6 +50,7 @@ services:
       - ./volumes/pki/hsm-service/server/hsm-service.key:/app/pki/server/hsm-service.key:ro
       - ./services/hsm-service/scripts:/app/scripts:ro
       - ./volumes/hsm-tokens:/var/lib/softhsm/tokens
+      - ./services/hsm-service/logs:/var/log/hsm-service
     ports:
       - "8443:8443"
     networks:
