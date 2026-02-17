@@ -56,53 +56,226 @@
 
 **Проблема:** Разные подходы к критически важным аспектам системы создают технический долг и усложняют поддержку.
 
-#### 1.1. Унификация логирования (1 день)
+#### 1.1. Унификация логирования (2-3 дня) 🔴
+
+**КЛЮЧЕВАЯ ПРОБЛЕМА:** Разделенные подходы к логированию затрудняют отладку в Docker и мониторинг
 
 **Текущая ситуация:**
 
-| Сервис | Библиотека | Формат | Stdout | Файл | Docker compatibility |
-|--------|-----------|--------|--------|------|---------------------|
-| HSM | `log/slog` | JSON | ✅ | ✅ | ✅ Отлично |
-| CTS-Core | `log/slog` | Plain text | ❌ | ✅ | ❌ Плохо |
-| Trader | `log/slog` | Plain text | ❌ | ✅ | ❌ Плохо |
-| Web UI | `zerolog` | Text | ✅ | ✅ | ✅ Хорошо |
+| Сервис | Библиотека | Формат | Stdout | Файл | Ротация | docker logs |
+|--------|-----------|--------|--------|------|---------|------------|
+| HSM | ✅ slog | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
+| CTS-Core | ✅ slog | ❌ Text | ❌ | ✅ | ❌ Custom | ❌ Нет логов |
+| Trader | ✅ slog | ❌ Text | ❌ | ✅ | ❌ Custom | ❌ Нет логов |
+| Web UI | ❌ zerolog | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
 
-**Проблемы:**
-- CTS-Core и Trader логи **не видны** в `docker logs`
-- Разные форматы усложняют централизованный сбор логов
-- Plain text сложнее парсить автоматически
-- Web UI использует внешнюю зависимость (zerolog)
+**Основной дефект:** `docker logs ct-system-cts-core-1` и `docker logs ct-system-trader-daemon-1` **НЕ показывают логи**, потому что логирующие потоки идут только в файл!
 
-**Решение:**
-- ✅ **Эталон**: HSM Service (slog + JSON + stdout + file + lumberjack)
-- 🔧 **Исправить**: CTS-Core, Trader (stdout + JSON + lumberjack)
-- 🔧 **Обязательно**: Web UI перевести на slog (убрать zerolog, единый JSON)
-  - **Текущее состояние Web UI**: zerolog с text format + stdout + file
-  - **Цель**: slog + JSON + stdout + file + lumberjack (как в HSM)
-  - **Приоритет**: HIGH (первая задача стандартизации)
+**Детальный анализ:** [LOGGING_ANALYSIS_DETAILED.md](LOGGING_ANALYSIS_DETAILED.md) (62 строк, чек-листы, примеры)
 
-**Задачи:**
+### Требуемые изменения по сервисам
+
+#### CTS-Core (1 день)
 ```
-[ ] CTS-Core: Добавить os.Stdout в MultiWriter
-[ ] CTS-Core: Переключить на JSON формат (slog.NewJSONHandler)
-[ ] CTS-Core: Использовать lumberjack вместо кастомного rotatedFile
-[ ] Trader: Аналогично CTS-Core (stdout + JSON + lumberjack)
-[ ] Web UI: Миграция на slog (JSON + stdout + file + lumberjack)
-[ ] Тестирование: Проверить docker logs для всех сервисов
-[ ] Документация: Обновить FIX_LOGGING_QUICK.md
+Priority: HIGH
+Impact: docker logs станут видны
+Effort: 1-2 дня
+
+[ ] Добавить os.Stdout в MultiWriter (logger.go:45)
+    - Change: w := errorRotated  →  w := io.MultiWriter(os.Stdout, errorRotated)
+    
+[ ] Переключить на JSON формат (logger.go:70)
+    - Current: &plainTextHandler{...}
+    - New: slog.NewJSONHandler(w, &slog.HandlerOptions{Level: logLevel})
+    
+[ ] Заменить custom rotatedFile на lumberjack (logger.go:25-60)
+    - Run: go get github.com/natefinch/lumberjack
+    - Delete: struct rotatedFile (60 lines)
+    - Add: &lumberjack.Logger{MaxSize: maxFileSizeMB, MaxBackups: 10, MaxAge: 30, Compress: true}
+    
+[ ] Тестирование:
+    - docker-compose up cts-core-1
+    - docker logs ct-system-cts-core-1 | head -20
+    - Expected: JSON strings with module, level, etc.
 ```
+
+**Files to modify:**
+- [services/cts-core/internal/logger/logger.go](services/cts-core/internal/logger/logger.go)
+- `go.mod` (add lumberjack)
+
+**Reference implementation:** [services/hsm-service/internal/server/logger.go](services/hsm-service/internal/server/logger.go)
+
+---
+
+#### Trader Daemon (1 день)
+```
+Priority: HIGH
+Impact: docker logs станут видны
+Effort: 1 day (identical changes to CTS-Core)
+
+[ ] Same as CTS-Core:
+    - os.Stdout in MultiWriter
+    - JSON format (slog.NewJSONHandler)
+    - Replace rotatedFile with lumberjack
+
+[ ] File to modify:
+    - services/trader-daemon/internal/logger/logger.go
+    
+[ ] Difference from CTS-Core:
+    - Trader has Trade logger module (use same pattern)
+    - Both modules (main + trade) write to single file
+```
+
+**Files to modify:**
+- [services/trader-daemon/internal/logger/logger.go](services/trader-daemon/internal/logger/logger.go)
+
+---
+
+#### Web UI (2-3 дня)
+```
+Priority: HIGH
+Complexity: Medium (library migration + stream splitting)
+Impact: Unified with other services + new access log analytics
+
+[ ] PHASE 1: Migration from zerolog → slog (1 day)
+    [ ] Remove zerolog from go.mod
+    [ ] Replace 'import "github.com/rs/zerolog"' with 'import "log/slog"'
+    [ ] Update all logger.Get() calls to slog.Default() / slog.With("module", "...")
+    [ ] Test: make test (all tests must pass)
+
+[ ] PHASE 2: Implement Access Log Splitting (1-2 days)
+    [ ] Create internal/logger/access_logger.go
+        - Separate slog.Logger for HTTP request logging
+        - Format: method, path, status, duration_ms, client_ip, user_id
+        
+    [ ] Create internal/logger/error_logger.go
+        - Main slog.Logger for app errors
+        - Format: level, message, module, error, context
+        
+    [ ] Create internal/middleware/access_log_middleware.go
+        - Gin middleware to capture all HTTP requests
+        - Log method, path, status, latency, IP
+        
+    [ ] Update lumberjack config:
+        - access.log: 50MB max, keep 10, 7 days
+        - error.log: 100MB max, keep 5, 30 days
+        
+    [ ] Test:
+        - docker logs | grep "HTTP\|error"
+        - Check /var/log/web-ui/ has both access.log and error.log
+
+[ ] Configuration:
+    - logging:
+        level: "info"
+        dir: "/var/log/web-ui"
+        format: "json"
+        max_file_size_mb: 100
+        access_log:
+          enabled: true
+          max_file_size_mb: 50
+          max_backups: 10
+          max_age_days: 7
+
+[ ] Files to create/modify:
+    - services/web-ui-go/internal/logger/logger.go (REWRITE)
+    - services/web-ui-go/internal/logger/access_logger.go (NEW)
+    - services/web-ui-go/internal/logger/error_logger.go (NEW)
+    - services/web-ui-go/internal/middleware/access_log.go (NEW)
+    - services/web-ui-go/conf/config.yaml (update logging section)
+```
+
+**Detailed guide:** See [services/web-ui-go/DEVELOPMENT_PLAN.md](services/web-ui-go/DEVELOPMENT_PLAN.md) Section 2 "КРИТИЧНО: Унификация логирования"
+
+---
+
+#### HSM Service (optional improvements)
+```
+Status: Updated ✅
+Priority: LOW (improvements only, not blocking)
+
+[x] Split audit, access, and error logs with rotation + JSON
+    - audit.log, access.log, error.log with lumberjack
+    - audit/access can mirror to stdout; error can mirror debug
+
+[x] Request tracking in audit/access/error logs
+    - request_id header X-Request-ID
+    - status/result/error_code, key_id, audit context
+
+[x] Startup validation of log paths
+    - fail fast if log dir is not writable
+    - default paths and env overrides via config
+
+[x] Docs + integration/e2e updates
+    - log mounts in docker-compose and tests
+    - references in monitoring/troubleshooting
+
+[x] Graceful shutdown + panic recovery
+    - SIGTERM/SIGINT -> Shutdown(ctx)
+    - CloseLogger() on exit
+    - recovery middleware logs stack in error.log
+```
+
+---
+
+### 📊 Unified Logging Standard Summary
+
+**Technology Stack:**
+- **Library:** `log/slog` (Go stdlib 1.21+, no external deps)
+- **Format:** JSON (for log aggregation tools)
+- **Output:** MultiWriter(os.Stdout, logfile)
+- **Rotation:** lumberjack.Logger (size + age + compress + cleanup)
+- **Modularity:** slog.With("module", "name") for component tracking
+
+**Log Files (per service):**
+```
+/var/log/cts-core/
+  └── error.log*          # All logs (JSON format)
+
+/var/log/trader-daemon/
+  └── daemon.log*         # All logs (JSON format)
+
+/var/log/web-ui-go/
+  ├── access.log*         # HTTP requests only (JSON, 50MB limit)
+  └── error.log*          # Errors + events (JSON, 100MB limit)
+
+/var/log/hsm-service/
+    ├── audit.log*          # Audit logs (JSON format)
+    ├── access.log*         # HTTP access logs (JSON format)
+    └── error.log*          # Error/system logs (JSON format)
+```
+
+**Where \* means rotated files:**
+```
+error.log              # current
+error.log.1            # backup 1 (if rotated)
+error.log.1.gz         # compressed
+error.log.2.gz
+error.log.3.gz
+```
+
+**Benefits:**
+- ✅ All logs visible in `docker logs <service>`
+- ✅ JSON format → easy to parse in ELK/Loki/Grafana
+- ✅ Automatic rotation, compression, and cleanup
+- ✅ No external logging dependencies
+- ✅ Web UI access logs for analytics
+- ✅ Consistent across all 4 services
+
+---
 
 **Результат:**
 - Все логи видны в `docker logs <service>`
 - Единый JSON формат для ELK/Loki/Grafana
 - Файлы с ротацией для долгосрочного хранения
 - Нет внешних зависимостей (только stdlib + lumberjack)
+- Web UI: разделенные логи (access.log + error.log) для аналитики и отладки
 
 **Файлы:**
 - `/home/dev/docker/ct-system/LOGGING_ANALYSIS.md` (подробный анализ)
 - `services/cts-core/internal/logger/logger.go`
 - `services/trader-daemon/internal/logger/logger.go`
-- `services/web-ui-go/internal/logger/logger.go`
+- `services/web-ui-go/internal/logger/logger.go` (с access/error разделением)
+- `services/web-ui-go/internal/middleware/request_logging.go` (новый файл для HTTP логирования)
 
 ---
 
@@ -354,7 +527,7 @@
 **Опционально (low priority):**
 
 ```
-[ ] Объединение create-kek в hsm-admin (CLI unification)
+[x] Объединение create-kek в hsm-admin (CLI unification, DONE v2.0.0)
 [ ] Multi-slot architecture (изоляция контекстов)
 [ ] Audit API (REST endpoint для аудита)
 [ ] Key escrow (split knowledge для recovery)

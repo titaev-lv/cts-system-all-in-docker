@@ -10,33 +10,27 @@
 
 ## Текущее состояние логирования
 
-### ✅ HSM Service (эталон, уже в production)
+### ✅ HSM Service (эталон, v1.1.3)
 
-**Файл:** `services/hsm-service/main.go`
+**Файл:** `services/hsm-service/internal/server/logger.go`
 
 **Библиотека:** `log/slog` (standard library Go 1.21+)
 
-**Вывод:**
-```go
-multiWriter := io.MultiWriter(os.Stdout, logWriter)
-logger := slog.New(slog.NewJSONHandler(multiWriter, &slog.HandlerOptions{
-    Level: slog.LevelInfo,
-}))
-```
-
 **Куда пишет:**
-- ✅ **stdout** (основной вывод, виден в `docker logs`)
-- ✅ Дополнительно: `/var/log/hsm-service/hsm-service.log` (через lumberjack с ротацией)
+- ✅ **audit.log**: `/var/log/hsm-service/audit.log`
+- ✅ **access.log**: `/var/log/hsm-service/access.log`
+- ✅ **error.log**: `/var/log/hsm-service/error.log`
+- ✅ **stdout**: audit/access могут дублироваться в stdout (видно в `docker logs`)
 
-**Формат:** JSON (структурированный)
+**Формат:** JSON (структурированный), UTC RFC3339 microseconds
 
 **Ротация:** lumberjack (100MB, 10 backup, 30 дней, сжатие)
 
-**Плюсы:**
-- ✅ Работает с `docker logs`
-- ✅ Структурированные JSON логи легко парсить
-- ✅ Дублирование в файл для архивации
-- ✅ Стандартная библиотека, без зависимостей
+**Дополнительно:**
+- request_id (X-Request-ID) в audit/access/error
+- Fail-fast проверка доступности директории логов
+- Graceful shutdown (SIGTERM/SIGINT) + `Shutdown(ctx)`
+- Panic recovery с логированием stack trace в `error.log`
 
 **Docker compatibility:** ✅ ОТЛИЧНО
 
@@ -326,7 +320,7 @@ trader-1:
 ```go
 func Init(levelStr, dir string, maxFileSizeMB int) error {
     // Create log directory
-    if err := os.MkdirAll(dir, 0755); err != nil {
+    if err := os.MkdirAll(dir, 0750); err != nil {
         return err
     }
 
@@ -388,7 +382,7 @@ go get gopkg.in/natefinch/lumberjack.v2
 
 ```go
 func Init(levelStr, dir string, maxFileSizeMB int) error {
-    if err := os.MkdirAll(dir, 0755); err != nil {
+    if err := os.MkdirAll(dir, 0750); err != nil {
         return err
     }
 
