@@ -10,7 +10,7 @@
 
 ## Текущее состояние логирования
 
-### ✅ HSM Service (эталон, v1.1.3)
+### ✅ HSM Service (эталон, v2.0.0)
 
 **Файл:** `services/hsm-service/internal/server/logger.go`
 

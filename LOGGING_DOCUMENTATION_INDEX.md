@@ -1,6 +1,6 @@
 # 📚 Logging Documentation Index
 
-> **Date:** 2026-02-10  
+> **Date:** 2026-02-18  
 > **Version:** 1.0  
 > **Status:** Comprehensive audit and unification plan complete
 
@@ -71,7 +71,7 @@
 #### HSM Service
 - **[services/hsm-service/DEVELOPMENT_PLAN.md](services/hsm-service/DEVELOPMENT_PLAN.md#-unifikacija-logirovanija)**
   - Section: "📊 Унификация логирования"
-  - Status: ✅ REFERENCE IMPLEMENTATION (v1.1.3)
+  - Status: ✅ REFERENCE IMPLEMENTATION (v2.0.0)
   - Notes: audit/access/error split, request_id, fail-fast log checks, graceful shutdown, panic recovery
 
 ---
