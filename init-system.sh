@@ -372,10 +372,19 @@ print_header "Step 4: Initializing Service Configurations"
 print_info "Checking service configuration files..."
 
 # Check for example configs and create if needed
-if [ -d "$PROJECT_ROOT/services/cts-core" ] && [ -f "$PROJECT_ROOT/services/cts-core/conf/config.example.ini" ]; then
-    if [ ! -f "$PROJECT_ROOT/services/cts-core/conf/config.ini" ]; then
+if [ -d "$PROJECT_ROOT/services/cts-core" ] && [ -f "$PROJECT_ROOT/services/cts-core/conf/config.example.yaml" ]; then
+    if [ ! -f "$PROJECT_ROOT/services/cts-core/conf/config.yaml" ]; then
         print_step "Creating cts-core config from example..."
-        cp "$PROJECT_ROOT/services/cts-core/conf/config.example.ini" "$PROJECT_ROOT/services/cts-core/conf/config.ini"
+        cp "$PROJECT_ROOT/services/cts-core/conf/config.example.yaml" "$PROJECT_ROOT/services/cts-core/conf/config.yaml"
+        print_step "Enabling TLS in cts-core config..."
+        awk '
+            $0 ~ /^server:/ { in_server = 1 }
+            in_server && $0 ~ /^[^[:space:]]/ && $0 !~ /^server:/ { in_server = 0; in_tls = 0 }
+            in_server && $0 ~ /^[[:space:]]+tls:/ { in_tls = 1 }
+            in_server && in_tls && $0 ~ /^[[:space:]]+enabled:/ { sub(/false/, "true"); in_tls = 0 }
+            { print }
+        ' "$PROJECT_ROOT/services/cts-core/conf/config.yaml" > "$PROJECT_ROOT/services/cts-core/conf/config.yaml.tmp"
+        mv "$PROJECT_ROOT/services/cts-core/conf/config.yaml.tmp" "$PROJECT_ROOT/services/cts-core/conf/config.yaml"
         print_success "cts-core config created"
     else
         print_info "cts-core config already exists"

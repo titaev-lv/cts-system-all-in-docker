@@ -109,41 +109,49 @@ services:
     restart: unless-stopped
 
   # 4. CTS-Core (оркестратор)
-#  cts-core:
-#    build:
-#      context: ./services/cts-core
-#      dockerfile: Dockerfile
-#    container_name: ct-system-cts-core
+  cts-core:
+    build:
+      context: ./services/cts-core
+      dockerfile: Dockerfile
+    container_name: ct-system-cts-core
 #    user: "0:0"
-#    depends_on:
-#      mysql:
-#        condition: service_healthy
-#      hsm:
- #       condition: service_healthy
-#    volumes:
-#      - ./services/cts-core/conf:/app/conf:ro
-#      - ./services/cts-core/pki:/app/pki:ro
-#      - ./services/cts-core/logs:/app/logs
-#      - ./services/cts-core/state:/app/state
-#    environment:
-#      - TZ=${TZ:-UTC}
-#    ports:
-#      - "8080:8080"  # REST API (Phase 1.5+)
-#      - "8081:8081"  # WebSocket (Phase 2+)
-#    networks:
-#      - cts-net
-#    healthcheck:
-#      test: ["CMD-SHELL", "pgrep -f cts-core || exit 1"]
-#      interval: 15s
-#      timeout: 5s
-#      retries: 3
-#      start_period: 40s
-#    deploy:
-#      resources:
-#        limits:
-#          cpus: '4'
-#          memory: 2G
-#    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      hsm:
+        condition: service_healthy
+    volumes:
+      - ./services/cts-core/conf:/app/conf:ro
+      - ./volumes/pki/ca/ca.crt:/app/pki/ca/ca.crt:ro
+      - ./volumes/pki/cts-core/server/cts-core.crt:/app/pki/server/cts-core.crt:ro
+      - ./volumes/pki/cts-core/server/cts-core.key:/app/pki/server/cts-core.key:ro
+      - ./volumes/pki/hsm-service/clients/cts-core-trader/cts-core-hsm-trader.crt:/app/pki/hsm-service/clients/cts-core-trader/cts-core-hsm-trader.crt:ro
+      - ./volumes/pki/hsm-service/clients/cts-core-trader/cts-core-hsm-trader.key:/app/pki/hsm-service/clients/cts-core-trader/cts-core-hsm-trader.key:ro
+      - ./volumes/pki/hsm-service/clients/cts-core-2fa/cts-core-hsm-2fa.crt:/app/pki/hsm-service/clients/cts-core-2fa/cts-core-hsm-2fa.crt:ro
+      - ./volumes/pki/hsm-service/clients/cts-core-2fa/cts-core-hsm-2fa.key:/app/pki/hsm-service/clients/cts-core-2fa/cts-core-hsm-2fa.key:ro
+      - ./volumes/pki/mysql/clients/cts-core/cts-core-mysql.crt:/app/pki/client/cts-core-mysql.crt:ro
+      - ./volumes/pki/mysql/clients/cts-core/cts-core-mysql.key:/app/pki/client/cts-core-mysql.key:ro
+      - ./services/cts-core/logs:/app/logs
+      - ./services/cts-core/state:/app/state
+    environment:
+      - TZ=${TZ:-UTC}
+    ports:
+      - "8080:8080"  # REST API (Phase 1.5+)
+      - "8081:8081"  # WebSocket (Phase 2+)
+    networks:
+      - cts-net
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f cts-core || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 2G
+    restart: unless-stopped
 
   # 5. Trader-1 (test)
 #  trader-1:
