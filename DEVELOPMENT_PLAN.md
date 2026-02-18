@@ -65,11 +65,11 @@
 | Сервис | Библиотека | Формат | Stdout | Файл | Ротация | docker logs |
 |--------|-----------|--------|--------|------|---------|------------|
 | HSM | ✅ slog | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
-| CTS-Core | ✅ slog | ❌ Text | ❌ | ✅ | ❌ Custom | ❌ Нет логов |
+| CTS-Core | ✅ slog | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
 | Trader | ✅ slog | ❌ Text | ❌ | ✅ | ❌ Custom | ❌ Нет логов |
 | Web UI | ❌ zerolog | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
 
-**Основной дефект:** `docker logs ct-system-cts-core-1` и `docker logs ct-system-trader-daemon-1` **НЕ показывают логи**, потому что логирующие потоки идут только в файл!
+**Основной дефект:** `docker logs ct-system-trader-daemon-1` **НЕ показывает логи**, потому что логирующие потоки идут только в файл и нет прав на запись.
 
 **Детальный анализ:** [LOGGING_ANALYSIS_DETAILED.md](LOGGING_ANALYSIS_DETAILED.md) (62 строк, чек-листы, примеры)
 
@@ -78,20 +78,15 @@
 #### CTS-Core (1 день)
 ```
 Priority: HIGH
-Impact: docker logs станут видны
+Impact: docker logs видны (DONE)
 Effort: 1-2 дня
 
-[ ] Добавить os.Stdout в MultiWriter (logger.go:45)
-    - Change: w := errorRotated  →  w := io.MultiWriter(os.Stdout, errorRotated)
-    
-[ ] Переключить на JSON формат (logger.go:70)
-    - Current: &plainTextHandler{...}
-    - New: slog.NewJSONHandler(w, &slog.HandlerOptions{Level: logLevel})
-    
-[ ] Заменить custom rotatedFile на lumberjack (logger.go:25-60)
-    - Run: go get github.com/natefinch/lumberjack
-    - Delete: struct rotatedFile (60 lines)
-    - Add: &lumberjack.Logger{MaxSize: maxFileSizeMB, MaxBackups: 10, MaxAge: 30, Compress: true}
+[x] Добавить os.Stdout в MultiWriter
+[x] Переключить на JSON формат (slog.NewJSONHandler)
+[x] Заменить custom rotatedFile на lumberjack
+
+[ ] Добавить request_id (X-Request-ID) и проброс в логи
+[ ] Разделить access/error/out_request логи
     
 [ ] Тестирование:
     - docker-compose up cts-core-1
@@ -101,7 +96,7 @@ Effort: 1-2 дня
 
 **Files to modify:**
 - [services/cts-core/internal/logger/logger.go](services/cts-core/internal/logger/logger.go)
-- `go.mod` (add lumberjack)
+- middleware/handlers (request_id + access/out_request)
 
 **Reference implementation:** [services/hsm-service/internal/server/logger.go](services/hsm-service/internal/server/logger.go)
 

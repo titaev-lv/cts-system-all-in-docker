@@ -10,7 +10,7 @@
 
 | Task | Service | Complexity | Time | Status |
 |------|---------|-----------|------|--------|
-| Add stdout + JSON | CTS-Core | Easy | 0.5d | Priority |
+| Add stdout + JSON | CTS-Core | Easy | 0.5d | ✅ Done |
 | Add stdout + JSON | Trader | Easy | 0.5d | Priority |
 | Migrate zerolog→slog | Web UI | Medium | 2-3d | Priority |
 | Add access logging | Web UI | Medium | 1d | With migration |
@@ -18,57 +18,13 @@
 
 ---
 
-## 🔧 CTS-Core: Logging Fix (30 minutes)
+## 🔧 CTS-Core: Logging Fix (DONE)
 
-### Step 1: Add stdout output
+CTS-Core уже переведен на JSON + stdout + lumberjack.
 
-**File:** `services/cts-core/internal/logger/logger.go`
-
-**Change (around line 45):**
-```go
-// BEFORE:
-w := errorRotated  // only file
-
-// AFTER:
-w := io.MultiWriter(os.Stdout, errorRotated)  // file + console
-```
-
-### Step 2: Switch to JSON format
-
-**Change (around line 70):**
-```go
-// BEFORE:
-handler := &plainTextHandler{w: w, level: logLevel, module: "main"}
-
-// AFTER:
-handler := slog.NewJSONHandler(w, &slog.HandlerOptions{
-    Level: logLevel,
-})
-```
-
-### Step 3: Replace custom rotation with lumberjack
-
-**Install:**
-```bash
-cd services/cts-core
-go get github.com/natefinch/lumberjack
-```
-
-**Replace in logger.go (lines 25-60):**
-```go
-// DELETE: struct rotatedFile { ... } (entire struct, ~60 lines)
-
-// ADD in Init():
-import "github.com/natefinch/lumberjack"
-
-errorLog := &lumberjack.Logger{
-    Filename:   filepath.Join(dir, "error.log"),
-    MaxSize:    maxFileSizeMB,  // from parameter
-    MaxBackups: 10,
-    MaxAge:     30,
-    Compress:   true,
-}
-```
+**Осталось сделать:**
+- Добавить request_id middleware
+- Разделить access/error/out_request логи
 
 ### Verify
 

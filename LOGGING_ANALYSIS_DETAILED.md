@@ -5,15 +5,15 @@
 | Параметр | HSM Service | CTS-Core | Trader | Web UI (Go) |
 |----------|------------|----------|--------|------------|
 | **Библиотека** | `slog` ✅ | `slog` ✅ | `slog` ✅ | `zerolog` ❌ |
-| **Формат** | JSON | Text (plain) | Text (plain) | JSON/Text |
-| **Ротация** | `lumberjack` ✅ | Кастомный | Кастомный | `lumberjack` ✅ |
-| **MultiWriter** | Да (stdout+file) | Да (file) | Да (file) | Да (stdout+file) |
+| **Формат** | JSON | JSON | Text (plain) | JSON/Text |
+| **Ротация** | `lumberjack` ✅ | `lumberjack` ✅ | Кастомный | `lumberjack` ✅ |
+| **MultiWriter** | Да (stdout+file) | Да (stdout+file) | Да (file) | Да (stdout+file) |
 | **Модульность** | ✅ module tags | Get("module") | Get("module") | Нет ❌ |
 | **Access Log** | access.log | - | - | ❌ Не разделены |
 | **Error Log** | error.log + audit.log | error.log | - | ❌ Не разделены |
-| **Проверка прав** | ✅ Fail-fast | ✅ MkdirAll | ✅ MkdirAll | ✅ MkdirAll |
+| **Проверка прав** | ✅ Fail-fast | ✅ Fail-fast | ✅ MkdirAll | ✅ MkdirAll |
 | **Graceful shutdown** | ✅ SIGTERM/SIGINT | ✅ defer logger.Close() | ✅ defer logger.Close() | ❌ Нет |
-| **Защита от паник** | ✅ Recovery middleware | Кастомный plain handler | Кастомный plain handler | zerolog default |
+| **Защита от паник** | ✅ Recovery middleware | ❌ Нет | Кастомный plain handler | zerolog default |
 
 ---
 
@@ -48,30 +48,33 @@ accessLogger := slog.New(slog.NewJSONHandler(accessWriter, opts))
 
 ---
 
-### 2. CTS-Core ⚠️ (Почти хорошо, но нужны доработки)
+### 2. CTS-Core ⚠️ (Старт приведения к стандарту)
 
 **Плюсы:**
-- ✅ slog
+- ✅ slog + JSON формат
+- ✅ stdout + file (видно в docker logs)
+- ✅ lumberjack ротация
+- ✅ Fail-fast проверка доступности директории логов (write/rename)
 - ✅ Модульное логирование: Get("main"), Get("database"), Get("hsm")
-- ✅ MkdirAll() проверка перед созданием логов
-- ✅ Параметризованная ротация (maxFileSizeMB из конфига)
 - ✅ Graceful shutdown: `defer logger.Close()`
 
 **Минусы:**
-- ❌ Кастомный rotatedFile вместо lumberjack:
-  - Нет автоматического сжатия (gzip)
-  - Нет автоматической очистки старых файлов по срокам
-  - Более высокий риск ошибок
-- ❌ Plain text формат вместо JSON (сложнее парсить в ELK/Loki)
-- ❌ Только file вывод, но НЕ stdout (логи не видны в docker logs!)
-- ❌ Нет error.log, все в одном файле
+- ❌ Нет разделения access/error/out_request
+- ❌ Нет request_id и middleware для его прокидывания
 
-**Initialization код:**
+**Initialization код (обновлено):**
 ```go
-// cmd/cts-core/main.go lines 22-33
+// cmd/cts-core/main.go
 cfg, err := config.Load(*configPath)
 // ... handle err
-if err := logger.Init(cfg.Logging.Level, cfg.Logging.Dir, cfg.Logging.MaxFileSizeMB); err != nil {
+if err := logger.Init(
+    cfg.Logging.Level,
+    cfg.Logging.Dir,
+    cfg.Logging.MaxFileSizeMB,
+    cfg.Logging.MaxBackups,
+    cfg.Logging.MaxAgeDays,
+    cfg.Logging.Compress,
+); err != nil {
     fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
     os.Exit(1)
 }

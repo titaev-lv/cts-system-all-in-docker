@@ -50,9 +50,9 @@
 #### CTS-Core
 - **[services/cts-core/DEVELOPMENT_PLAN.md](services/cts-core/DEVELOPMENT_PLAN.md#3-unifikacija-logirovanija)**
   - Section: "3. 📊 Унификация логирования"
-  - Changes needed: Add stdout + JSON + lumberjack
-  - Effort: 0.5 days
-  - Impact: HIGH (enables docker logs)
+  - Changes needed: Add request_id + access/out_request split
+  - Effort: 1-2 days
+  - Impact: MEDIUM (observability improvements)
 
 #### Trader Daemon
 - **[services/trader-daemon/DEVELOPMENT_PLAN.md](services/trader-daemon/DEVELOPMENT_PLAN.md#-kritichno-unifikacija-logirovanija)**
@@ -85,8 +85,8 @@
 3. Summary: 2-3 days effort, HIGH impact on debugging capability
 
 **Key metrics:**
-- 4 services need logging fixes
-- 1 critical (CTS-Core + Trader no docker logs)
+- 3 services need logging fixes
+- 1 critical (Trader no docker logs)
 - 1 platform migration (Web UI: zerolog → slog)
 - 1 enhancement (Web UI: access log split)
 
@@ -98,7 +98,7 @@
 
 **Quick path:**
 ```
-CTS-Core fix:    30 minutes  (add stdout + JSON + lumberjack)
+CTS-Core fix:    1-2 days    (request_id + access/out_request split)
 Trader fix:      30 minutes  (identical to CTS-Core)
 Web UI fix:      2-3 days    (migration + features)
 Testing:         1 day       (validation + docker logs checks)
@@ -140,9 +140,9 @@ docker logs ct-system-web-ui-1 | jq . | head
 | Component | Standard | HSM | CTS-Core | Trader | Web UI |
 |-----------|----------|-----|----------|--------|--------|
 | **Library** | slog | ✅ | ✅ | ✅ | ❌→✅ |
-| **Format** | JSON | ✅ | ❌→✅ | ❌→✅ | ✅ |
-| **Stdout** | Yes | ✅ | ❌→✅ | ❌→✅ | ✅ |
-| **Rotation** | lumberjack | ✅ | ❌→✅ | ❌→✅ | ✅ |
+| **Format** | JSON | ✅ | ✅ | ❌→✅ | ✅ |
+| **Stdout** | Yes | ✅ | ✅ | ❌→✅ | ✅ |
+| **Rotation** | lumberjack | ✅ | ✅ | ❌→✅ | ✅ |
 | **Access log** | (Web UI only) | - | - | - | ✅ |
 | **modules** | Yes | optional | ✅ | ✅ | ✅ |
 
@@ -175,7 +175,7 @@ docker logs ct-system-web-ui-1 | jq . | head
 ## 🎯 Implementation Priority
 
 ### Priority 1: Critical (2-3 days)
-- [ ] CTS-Core: Add stdout + JSON (blocks docker logs debugging)
+- [ ] CTS-Core: Add request_id + access/out_request split
 - [ ] Trader: Add stdout + JSON (blocks docker logs debugging)
 - [ ] Web UI: Migrate zerolog → slog (external dependency removal)
 
@@ -192,19 +192,16 @@ docker logs ct-system-web-ui-1 | jq . | head
 
 ### Before Implementation
 ```
-$ docker logs ct-system-cts-core-1
-<empty output>  ← PROBLEM: logs to file only, not stdout
-
 $ docker logs ct-system-trader-daemon-1
 <empty output>  ← PROBLEM: logs to file only, not stdout
 
-$ cat /var/log/cts-core/error.log
+$ cat /var/log/trader-daemon/error.log
 2026-02-10 14:30:45 [main] Started  ← PROBLEM: not JSON, hard to parse
 ```
 
 ### After Implementation
 ```
-$ docker logs ct-system-cts-core-1 | head -3 | jq .
+$ docker logs ct-system-trader-daemon-1 | head -3 | jq .
 {
   "time": "2026-02-10T14:30:45.123Z",
   "level": "INFO",
@@ -237,11 +234,11 @@ $ ls -lh /var/log/web-ui/
 ### For developers
 1. Read: [LOGGING_QUICK_REFERENCE.md](LOGGING_QUICK_REFERENCE.md)
 2. Pick your task:
-   - `Make CTS-Core logs visible` (30 min)
+  - `CTS-Core request_id + access/out_request split` (1-2 days)
    - `Make Trader logs visible` (30 min)
    - `Migrate Web UI logging` (2-3 days)
 3. Follow step-by-step instructions
-4. Validate with provided checklistss
+4. Validate with provided checklists
 
 ### For architects
 1. Read: [LOGGING_ANALYSIS_DETAILED.md](LOGGING_ANALYSIS_DETAILED.md)

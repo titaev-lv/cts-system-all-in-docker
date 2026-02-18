@@ -36,7 +36,7 @@
 
 ---
 
-### ❌ CTS-Core (нужна доработка)
+### ⚠️ CTS-Core (частично готово)
 
 **Файл:** `services/cts-core/internal/logger/logger.go`
 
@@ -44,45 +44,29 @@
 
 **Вывод:**
 ```go
-errorLogFile, err := os.OpenFile(errorLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-errorRotated := &rotatedFile{
-    file:     errorLogFile,
-    filePath: errorLogPath,
-    maxSize:  maxLogSize,
+errorLogFile := &lumberjack.Logger{
+    Filename:   filepath.Join(dir, "error.log"),
+    MaxSize:    maxFileSizeMB,
+    MaxBackups: 10,
+    MaxAge:     30,
+    Compress:   true,
 }
-Log = slog.New(&plainTextHandler{w: errorRotated, level: logLevel, module: "main"})
+writer := io.MultiWriter(os.Stdout, errorLogFile)
+Log = slog.New(slog.NewJSONHandler(writer, &slog.HandlerOptions{Level: logLevel, ReplaceAttr: replaceTimeAttr}))
 ```
 
 **Куда пишет:**
-- ❌ **ТОЛЬКО в файл** `logs/error.log`
-- ❌ НЕ пишет в stdout
+- ✅ **stdout + файл** `logs/error.log`
 
-**Формат:** Plain text (кастомный plainTextHandler)
-```
-2006-01-02 15:04:05.000000 [LEVEL] [module] message key=value
-```
+**Формат:** JSON (UTC RFC3339 microseconds)
 
-**Ротация:** Кастомная rotatedFile (переименование с timestamp)
-
-**Текущее состояние:**
-```bash
-$ docker logs ct-system-cts-core --tail 5
-fatal error: all goroutines are asleep - deadlock!
-
-goroutine 1 [select (no cases)]:
-main.main()
-        /build/cmd/cts-core/main.go:179 +0xea5
-```
-⚠️ **Видны только фатальные ошибки из stderr, обычные логи НЕ видны**
+**Ротация:** lumberjack
 
 **Проблемы:**
-- ❌ `docker logs ct-system-cts-core` показывает ТОЛЬКО панику из stderr
-- ❌ Обычные логи (info, warn, error) не видны в docker logs
-- ❌ Нужно заходить в контейнер или использовать `make logs-core-file`
-- ❌ Не стандартный для Docker подход
-- ❌ Plain text формат сложнее парсить автоматически
+- ❌ Нет разделения access/error/out_request
+- ❌ Нет request_id и middleware для его прокидывания
 
-**Docker compatibility:** ❌ ПЛОХО
+**Docker compatibility:** ✅ ХОРОШО
 
 ---
 
@@ -112,9 +96,9 @@ Trade = slog.New(&plainTextHandler{w: tradeRotated, level: logLevel, module: "tr
 - ❌ **ТОЛЬКО в файлы** `logs/error.log` и `logs/trade.log`
 - ❌ НЕ пишет в stdout
 
-**Формат:** Plain text (идентичен CTS-Core)
+**Формат:** Plain text (legacy)
 
-**Ротация:** Кастомная rotatedFile (идентична CTS-Core)
+**Ротация:** Кастомная rotatedFile (legacy)
 
 **Текущее состояние:**
 ```bash
@@ -222,7 +206,7 @@ globalLogger = zerolog.New(multiWriter).With().Timestamp().Logger()
 |--------|-----------|--------|------|--------|-------------|--------|
 | **HSM** | slog (stdlib) | ✅ | ✅ | JSON | ✅ Работает | ✅ Эталон |
 | **Web UI** | zerolog | ✅ | ✅ | Text | ✅ Работает | ⚠️ Унифицировать |
-| **CTS-Core** | slog (stdlib) | ❌ | ✅ | Text | ❌ Только panic | ❌ Исправить |
+| **CTS-Core** | slog (stdlib) | ✅ | ✅ | JSON | ✅ Работает | ⚠️ Частично |
 | **Trader** | slog (stdlib) | ❌ | ❌ | Text | ❌ Permission denied | ❌ Критично |
 
 ---
@@ -258,7 +242,6 @@ drwxrwxr-x 2 1001 1001 4096 logs/
 ```bash
 # Дать права на запись всем
 sudo chmod 777 services/trader-daemon/logs
-sudo chmod 777 services/cts-core/logs
 ```
 
 ### Решение 2: Запускать от пользователя (правильное)
@@ -311,66 +294,13 @@ trader-1:
 
 ---
 
-### 2. Исправление CTS-Core
+### 2. CTS-Core: остаточные задачи
 
-**Файл:** `services/cts-core/internal/logger/logger.go`
+**Статус:** JSON + stdout + lumberjack уже внедрены.
 
-**Что изменить:**
-
-```go
-func Init(levelStr, dir string, maxFileSizeMB int) error {
-    // Create log directory
-    if err := os.MkdirAll(dir, 0750); err != nil {
-        return err
-    }
-
-    logDir = dir
-    maxLogSize = int64(maxFileSizeMB) * 1024 * 1024
-
-    // Parse log level
-    switch strings.ToLower(levelStr) {
-    case "debug":
-        logLevel = slog.LevelDebug
-    case "info":
-        logLevel = slog.LevelInfo
-    case "warn":
-        logLevel = slog.LevelWarn
-    case "error":
-        logLevel = slog.LevelError
-    default:
-        logLevel = slog.LevelInfo
-    }
-
-    // Setup file writer with rotation
-    fileWriter := &lumberjack.Logger{
-        Filename:   filepath.Join(dir, "cts-core.log"),
-        MaxSize:    maxFileSizeMB,
-        MaxBackups: 10,
-        MaxAge:     30,
-        Compress:   true,
-    }
-
-    // ✅ ИСПРАВЛЕНИЕ: Добавить stdout
-    multiWriter := io.MultiWriter(os.Stdout, fileWriter)
-
-    // ✅ ИСПРАВЛЕНИЕ: Использовать JSON формат
-    Log = slog.New(slog.NewJSONHandler(multiWriter, &slog.HandlerOptions{
-        Level: logLevel,
-    }))
-
-    return nil
-}
-```
-
-**Удалить:**
-- ❌ `rotatedFile` struct (заменить на lumberjack)
-- ❌ `plainTextHandler` struct (использовать JSON)
-
-**Добавить зависимость:**
-```bash
-cd services/cts-core
-go get gopkg.in/natefinch/lumberjack.v2
-```
+**Осталось:**
+- Добавить request_id (X-Request-ID) и пробросить в логи.
+- Разделить access/error/out_request потоки.
 
 ---
 
@@ -475,7 +405,7 @@ logging:
 ### Приоритет 1 (критично для Docker)
 
 1. ❌ **Trader-1** - КРИТИЧНО: Исправить permission denied + добавить stdout
-2. ❌ **CTS-Core** - Добавить stdout в logger.go
+2. ⚠️ **CTS-Core** - Добавить request_id + split логов
 3. ✅ **Web UI** - Уже работает, но можно унифицировать на JSON
 
 ### Приоритет 2 (унификация)
@@ -491,25 +421,25 @@ logging:
 ### До (текущее):
 
 ```bash
-# CTS-Core - ПУСТО
-docker logs ct-system-cts-core
+# Trader - ПУСТО/ошибка
+docker logs ct-system-trader-1
 
 # Нужно лезть в файл
-docker exec ct-system-cts-core tail -f /app/logs/error.log
+docker exec ct-system-trader-1 tail -f /app/logs/error.log
 ```
 
 ### После (исправленное):
 
 ```bash
-# CTS-Core - РАБОТАЕТ
-docker logs ct-system-cts-core
-{"time":"2024-01-15T10:30:45Z","level":"INFO","msg":"Server started","port":"8080"}
-{"time":"2024-01-15T10:30:46Z","level":"INFO","msg":"Connected to HSM","hsm":"hsm-service:8443"}
+# Trader - РАБОТАЕТ
+docker logs ct-system-trader-1
+{"time":"2024-01-15T10:30:45Z","level":"INFO","msg":"Trader started","module":"main"}
+{"time":"2024-01-15T10:30:46Z","level":"INFO","msg":"Connected to CTS-Core","module":"ws"}
 
 # + файлы сохраняются для архивации
-docker exec ct-system-cts-core ls -lh /app/logs/
--rw-r--r-- 1 root root 45M Jan 15 10:30 cts-core.log
--rw-r--r-- 1 root root 12M Jan 10 14:22 cts-core.log.20240110_142203.gz
+docker exec ct-system-trader-1 ls -lh /app/logs/
+-rw-r--r-- 1 root root 45M Jan 15 10:30 trader.log
+-rw-r--r-- 1 root root 12M Jan 10 14:22 trader.log.20240110_142203.gz
 ```
 
 ---
@@ -551,10 +481,9 @@ docker logs ct-system-cts-core --tail 10 | jq '.'
    - Логи видны в docker logs
    - Можно унифицировать на slog + JSON
 
-3. **CTS-Core** - нужны исправления ❌
-   - Используют slog, но только в файл
-   - Видны только фатальные ошибки (stderr)
-   - Простое исправление: добавить io.MultiWriter
+3. **CTS-Core** - базовая унификация выполнена ✅
+    - slog + JSON + stdout + lumberjack
+    - Осталось: request_id и split логов (access/out_request)
 
 4. **Trader** - критическая проблема ❌
    - Permission denied при записи в logs/
@@ -575,15 +504,15 @@ docker logs ct-system-cts-core --tail 10 | jq '.'
 |--------|------------|--------|----------|
 | **HSM** | ✅ Работают | ✅ Отлично | Нет, это эталон |
 | **Web UI** | ✅ Работают | ✅ Хорошо | Опционально: JSON вместо text |
-| **CTS-Core** | ⚠️ Только panic | ❌ Плохо | Добавить stdout в logger.go |
+| **CTS-Core** | ✅ Работают | ⚠️ Частично | request_id + split логов |
 | **Trader-1** | ❌ Permission denied | ❌ Критично | 1) Исправить права<br>2) Добавить stdout |
 
-**Общая оценка:** 2/4 сервисов работают корректно с Docker логированием.
+**Общая оценка:** 3/4 сервисов работают корректно с Docker логированием.
 
 **Приоритет действий:**
 1. 🔴 Trader: Исправить permission denied (chmod 777 logs/)
-2. 🔴 Trader: Добавить stdout в logger.go
-3. 🟡 CTS-Core: Добавить stdout в logger.go
+2. 🔴 Trader: Добавить stdout + JSON + lumberjack
+3. 🟡 CTS-Core: request_id + access/out_request split
 4. 🟢 Web UI: Опционально сменить text на json
 5. 🟢 Все: Унифицировать на slog stdlib
 
