@@ -67,7 +67,7 @@
 | HSM | ✅ slog | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
 | CTS-Core | ✅ slog | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
 | Trader | ✅ slog | ❌ Text | ❌ | ✅ | ❌ Custom | ❌ Нет логов |
-| Web UI | ❌ zerolog | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
+| Web UI | ❌ external logger | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
 
 **Основной дефект:** `docker logs ct-system-trader-daemon-1` **НЕ показывает логи**, потому что логирующие потоки идут только в файл и нет прав на запись.
 
@@ -132,9 +132,9 @@ Priority: HIGH
 Complexity: Medium (library migration + stream splitting)
 Impact: Unified with other services + new access log analytics
 
-[ ] PHASE 1: Migration from zerolog → slog (1 day)
-    [ ] Remove zerolog from go.mod
-    [ ] Replace 'import "github.com/rs/zerolog"' with 'import "log/slog"'
+[ ] PHASE 1: Migration from legacy logger → slog (1 day)
+    [ ] Remove legacy logger from go.mod
+    [ ] Replace legacy logger imports with `log/slog`
     [ ] Update all logger.Get() calls to slog.Default() / slog.With("module", "...")
     [ ] Test: make test (all tests must pass)
 
@@ -587,18 +587,18 @@ error.log.3.gz
 **Цель:** Единый подход к логированию во всей системе
 
 **Текущее состояние:**
-- Web UI использует `zerolog` (text format)
+- Web UI использует legacy logger (text format)
 - Конфигурация: `logging.output: "both"` (stdout + file)
 - ✅ Работает корректно, логи видны в docker logs
 
 **Задачи:**
 ```
-[ ] Заменить zerolog на log/slog
+[ ] Заменить legacy logger на log/slog
 [ ] Переключить на JSON формат (slog.NewJSONHandler)
 [ ] Использовать lumberjack для ротации (как в HSM)
 [ ] Обновить internal/logger/logger.go
 [ ] Обновить конфигурацию (logging.format: "json")
-[ ] Удалить зависимость: github.com/rs/zerolog
+[ ] Удалить зависимость legacy logger из go.mod
 [ ] Tests: logging initialization, format, rotation
 [ ] Документация: обновить LOGGING.md
 ```
@@ -731,7 +731,7 @@ gantt
         │   │   ├── USER_CONTROLLER.md
         │   │   └── GROUP_CONTROLLER.md
         │   └── logger/
-        │       └── LOGGING.md         # Web UI logging (zerolog)
+        │       └── LOGGING.md         # Web UI logging (legacy)
         └── config/
             └── config.yaml            # Web UI configuration
 ```
@@ -814,7 +814,7 @@ make up
 - Начать Priority 2: Phase 1.4 State Management
 
 **Вопросы для обсуждения:**
-- Web UI: мигрировать на slog или оставить zerolog?
+- Web UI: мигрировать на slog или оставить legacy logger?
 - Trader config: INI → YAML приоритет?
 - CI/CD: какой pipeline предпочтительнее? (GitHub Actions, GitLab CI, Jenkins)
 

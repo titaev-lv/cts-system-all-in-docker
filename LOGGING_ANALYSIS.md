@@ -58,13 +58,22 @@ Log = slog.New(slog.NewJSONHandler(writer, &slog.HandlerOptions{Level: logLevel,
 **Куда пишет:**
 - ✅ **stdout + файл** `logs/error.log`
 
+**Целевая схема для CTS-Core (6 файлов):**
+- error.log
+- access.log
+- out_request.log
+- ws_access.log
+- ws_out.log
+- audit.log
+
 **Формат:** JSON (UTC RFC3339 microseconds)
 
 **Ротация:** lumberjack
 
 **Проблемы:**
-- ❌ Нет разделения access/error/out_request
+- ❌ Нет разделения error/access/out_request/ws_access/ws_out/audit
 - ❌ Нет request_id и middleware для его прокидывания
+- ❌ Нет полного graceful shutdown (SIGTERM/SIGINT + Shutdown(ctx)) как в HSM
 
 **Docker compatibility:** ✅ ХОРОШО
 
@@ -125,7 +134,7 @@ Failed to init logger: open logs/error.log: permission denied
 
 **Файл:** `services/web-ui-go/internal/logger/logger.go`
 
-**Библиотека:** `github.com/rs/zerolog` (внешняя зависимость)
+**Библиотека:** external logger (внешняя зависимость)
 
 **Конфигурация:** (из `/app/config/config.yaml`)
 ```yaml
@@ -140,42 +149,28 @@ logging:
   compress: true
 ```
 
-**Вывод:**
+**Вывод (псевдокод):**
 ```go
 var writers []io.Writer
 
-// stdout (работает)
 if logCfg.Output == "stdout" || logCfg.Output == "both" {
-    consoleWriter = zerolog.ConsoleWriter{
-        Out:        os.Stdout,
-        TimeFormat: time.RFC3339,
-        NoColor:    false,
-    }
-    writers = append(writers, consoleWriter)
+    writers = append(writers, os.Stdout)
 }
 
-// file (работает)
 if logCfg.Output == "file" || logCfg.Output == "both" {
-    fileWriter := &lumberjack.Logger{
-        Filename:   logCfg.File,
-        MaxSize:    logCfg.MaxSize,
-        MaxBackups: logCfg.MaxBackups,
-        MaxAge:     logCfg.MaxAge,
-        Compress:   logCfg.Compress,
-        LocalTime:  true,
-    }
+    fileWriter := &lumberjack.Logger{ /* ... */ }
     writers = append(writers, fileWriter)
 }
 
 multiWriter := io.MultiWriter(writers...)
-globalLogger = zerolog.New(multiWriter).With().Timestamp().Logger()
+logger = NewLogger(multiWriter)
 ```
 
 **Куда пишет:**
 - ✅ **stdout** (виден в `docker logs`)
 - ✅ **file** `./logs/ct-system.log`
 
-**Формат:** Text (zerolog.ConsoleWriter с цветами)
+**Формат:** Text (console writer с цветами)
 
 **Ротация:** lumberjack (100MB, 5 backup, 30 дней, сжатие)
 
@@ -192,7 +187,7 @@ globalLogger = zerolog.New(multiWriter).With().Timestamp().Logger()
 - ✅ Дублирование в файл
 
 **Минусы:**
-- ⚠️ Отличается от остальных (zerolog vs slog)
+- ⚠️ Отличается от остальных (legacy logger vs slog)
 - ⚠️ Text формат сложнее парсить автоматически (лучше JSON)
 - ⚠️ Дополнительная зависимость (не stdlib)
 
@@ -205,7 +200,7 @@ globalLogger = zerolog.New(multiWriter).With().Timestamp().Logger()
 | Сервис | Библиотека | stdout | file | Формат | Docker logs | Статус |
 |--------|-----------|--------|------|--------|-------------|--------|
 | **HSM** | slog (stdlib) | ✅ | ✅ | JSON | ✅ Работает | ✅ Эталон |
-| **Web UI** | zerolog | ✅ | ✅ | Text | ✅ Работает | ⚠️ Унифицировать |
+| **Web UI** | external logger | ✅ | ✅ | Text | ✅ Работает | ⚠️ Унифицировать |
 | **CTS-Core** | slog (stdlib) | ✅ | ✅ | JSON | ✅ Работает | ⚠️ Частично |
 | **Trader** | slog (stdlib) | ❌ | ❌ | Text | ❌ Permission denied | ❌ Критично |
 
@@ -410,7 +405,7 @@ logging:
 
 ### Приоритет 2 (унификация)
 
-4. Мигрировать Web UI с zerolog на slog (опционально)
+4. Мигрировать Web UI с legacy logger на slog (опционально)
 5. Обновить документацию по логированию
 6. Настроить centralized logging (ELK/Loki)
 
@@ -477,7 +472,7 @@ docker logs ct-system-cts-core --tail 10 | jq '.'
    - Работает идеально с Docker
 
 2. **Web UI** - работает хорошо ✅
-   - zerolog + text + stdout + file
+    - legacy logger + text + stdout + file
    - Логи видны в docker logs
    - Можно унифицировать на slog + JSON
 

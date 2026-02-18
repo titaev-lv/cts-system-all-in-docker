@@ -12,7 +12,7 @@
 |------|---------|-----------|------|--------|
 | Add stdout + JSON | CTS-Core | Easy | 0.5d | ✅ Done |
 | Add stdout + JSON | Trader | Easy | 0.5d | Priority |
-| Migrate zerolog→slog | Web UI | Medium | 2-3d | Priority |
+| Migrate legacy logger → slog | Web UI | Medium | 2-3d | Priority |
 | Add access logging | Web UI | Medium | 1d | With migration |
 | HSM reference (audit/access/error, request_id, fail-fast, graceful shutdown, panic recovery) | HSM | Done | - | ✅ |
 
@@ -24,7 +24,7 @@ CTS-Core уже переведен на JSON + stdout + lumberjack.
 
 **Осталось сделать:**
 - Добавить request_id middleware
-- Разделить access/error/out_request логи
+- Разделить логи на error/access/out_request/ws_access/ws_out/audit
 
 ### Verify
 
@@ -52,12 +52,12 @@ docker logs ct-system-cts-core-1 | head
 
 ## 🔧 Web UI: Logging Migration (2-3 days)
 
-### Phase 1: Remove zerolog dependency (1 day)
+### Phase 1: Remove legacy logger dependency (1 day)
 
 **Step 1: Remove from go.mod**
 ```bash
 cd services/web-ui-go
-go mod edit -droprequire github.com/rs/zerolog
+go mod edit -droprequire <legacy-logger-module>
 rm go.sum
 go mod tidy
 ```
@@ -65,7 +65,7 @@ go mod tidy
 **Step 2: Find & replace imports**
 ```bash
 # Find all occurrences:
-grep -r "github.com/rs/zerolog" .
+grep -r "legacy logger" .
 
 # Replace with:
 grep -r "log/slog" .

@@ -4,16 +4,16 @@
 
 | Параметр | HSM Service | CTS-Core | Trader | Web UI (Go) |
 |----------|------------|----------|--------|------------|
-| **Библиотека** | `slog` ✅ | `slog` ✅ | `slog` ✅ | `zerolog` ❌ |
+| **Библиотека** | `slog` ✅ | `slog` ✅ | `slog` ✅ | external logger ❌ |
 | **Формат** | JSON | JSON | Text (plain) | JSON/Text |
 | **Ротация** | `lumberjack` ✅ | `lumberjack` ✅ | Кастомный | `lumberjack` ✅ |
 | **MultiWriter** | Да (stdout+file) | Да (stdout+file) | Да (file) | Да (stdout+file) |
-| **Модульность** | ✅ module tags | Get("module") | Get("module") | Нет ❌ |
-| **Access Log** | access.log | - | - | ❌ Не разделены |
-| **Error Log** | error.log + audit.log | error.log | - | ❌ Не разделены |
+| **Модульность** | ✅ module tags | ✅ module tag (Get("module")) | ✅ module tag (Get("module")) | Нет ❌ |
+| **Access Log** | access.log | access.log + ws_access.log (target) | - | ❌ Не разделены |
+| **Error Log** | error.log + audit.log | error.log + audit.log (target) | - | ❌ Не разделены |
 | **Проверка прав** | ✅ Fail-fast | ✅ Fail-fast | ✅ MkdirAll | ✅ MkdirAll |
-| **Graceful shutdown** | ✅ SIGTERM/SIGINT | ✅ defer logger.Close() | ✅ defer logger.Close() | ❌ Нет |
-| **Защита от паник** | ✅ Recovery middleware | ❌ Нет | Кастомный plain handler | zerolog default |
+| **Graceful shutdown** | ✅ SIGTERM/SIGINT + Shutdown(ctx) + Close | ⚠️ Только Close | ⚠️ Только Close | ❌ Нет |
+| **Защита от паник** | ✅ Recovery middleware | ❌ Нет | Кастомный plain handler | legacy logger default |
 
 ---
 
@@ -56,11 +56,12 @@ accessLogger := slog.New(slog.NewJSONHandler(accessWriter, opts))
 - ✅ lumberjack ротация
 - ✅ Fail-fast проверка доступности директории логов (write/rename)
 - ✅ Модульное логирование: Get("main"), Get("database"), Get("hsm")
-- ✅ Graceful shutdown: `defer logger.Close()`
+- ✅ Graceful shutdown (частично): `defer logger.Close()`
 
 **Минусы:**
-- ❌ Нет разделения access/error/out_request
+- ❌ Нет разделения error/access/out_request/ws_access/ws_out/audit
 - ❌ Нет request_id и middleware для его прокидывания
+- ❌ Нет обработки SIGTERM/SIGINT и Shutdown(ctx) как в HSM (нужно унифицировать)
 
 **Initialization код (обновлено):**
 ```go
@@ -128,12 +129,12 @@ Trade := logger.Get("trade")
 ### 4. Web UI (Go) ❌ (Нужна коренная переделка)
 
 **Плюсы:**
-- ✅ zerolog (похожа на slog, но внешняя зависимость)
+- ✅ legacy logger (похожа на slog, но внешняя зависимость)
 - ✅ lumberjack ротация
 - ✅ stdout + file
 
 **Минусы:**
-- ❌ `zerolog` вместо `slog` (не стандартная библиотека, зависимость)
+- ❌ legacy logger вместо `slog` (не стандартная библиотека, зависимость)
 - ❌ Нет модульного логирования (компоненты не различимы в логах)
 - ❌ Модульность HTTP запросов требует разделения на access/error logы
 - ❌ Нет graceful shutdown логирования
@@ -153,7 +154,7 @@ log := logger.Get() // Глобальный логгер, нет модульн�
 
 ### 1. **Использовать одну библиотеку везде**
 - ✅ Стандарт: `log/slog` (встроенная в go 1.21+)
-- 🚫 Не использовать: zerolog, logrus и т.д.
+- 🚫 Не использовать: внешние логгеры (logrus и т.д.)
 
 ### 2. **Одинаковый механизм ротации**
 - ✅ Везде: `lumberjack.Logger` (https://github.com/natefinch/lumberjack)
@@ -213,6 +214,8 @@ hsmLogger := slog.With("module", "hsm")
 // {"timestamp":"...","level":"info","message":"Connected","module":"database"}
 ```
 
+**Стандарт:** модульность задается атрибутом `module`. Реализация через `Get("module")` эквивалентна `slog.With("module", ...)`.
+
 ### 6. **Graceful shutdown везде**
 ```go
 // В main.go
@@ -221,6 +224,8 @@ if err := logger.Init(cfg); err != nil {
 }
 defer logger.Close() // Закрыть файлы логов перед выходом
 ```
+
+**Стандарт:** обязательно обрабатывать `SIGTERM/SIGINT`, вызывать `server.Shutdown(ctx)` и закрывать логгеры.
 
 ### 7. **Stdout + File везде**
 - Все логи одновременно в файл И в stdout
@@ -271,8 +276,8 @@ logs/
 - [ ] **НУЖНО СДЕЛАТЬ**: Завершить реализацию Trade модуля логирования
 
 ### Web UI (Go)
-- [ ] **НУЖНО СДЕЛАТЬ**: Заменить zerolog на slog
-- [ ] **НУЖНО СДЕЛАТЬ**: Удалить зависимость от zerolog
+- [ ] **НУЖНО СДЕЛАТЬ**: Заменить legacy logger на slog
+- [ ] **НУЖНО СДЕЛАТЬ**: Удалить зависимость legacy logger
 - [ ] **НУЖНО СДЕЛАТЬ**: Добавить модульное логирование
 - [ ] **НУЖНО СДЕЛАТЬ**: Разделить логи на access.log + error.log
 - [ ] **НУЖНО СДЕЛАТЬ**: Добавить graceful shutdown (defer logger.Close())
@@ -284,7 +289,7 @@ logs/
 ## 🔧 Порядок миграции
 
 ### Phase 1: Web UI (критичный для стандартизации)
-1. Заменить zerolog → slog
+1. Заменить legacy logger → slog
 2. Добавить разделение access/error логов
 3. Модульное логирование (module в каждом компоненте)
 

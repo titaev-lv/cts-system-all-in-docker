@@ -50,7 +50,7 @@
 #### CTS-Core
 - **[services/cts-core/DEVELOPMENT_PLAN.md](services/cts-core/DEVELOPMENT_PLAN.md#3-unifikacija-logirovanija)**
   - Section: "3. 📊 Унификация логирования"
-  - Changes needed: Add request_id + access/out_request split
+  - Changes needed: Add request_id + split into error/access/out_request/ws_access/ws_out/audit
   - Effort: 1-2 days
   - Impact: MEDIUM (observability improvements)
 
@@ -64,7 +64,7 @@
 #### Web UI (Go)
 - **[services/web-ui-go/DEVELOPMENT_PLAN.md](services/web-ui-go/DEVELOPMENT_PLAN.md#-kritichno-unifikacija-logirovanija)**
   - Section: "🔴 КРИТИЧНО: Унификация логирования"
-  - Changes needed: zerolog → slog + access.log/error.log split
+  - Changes needed: legacy logger → slog + access.log/error.log split
   - Effort: 2-3 days
   - Impact: HIGH (migration + new features)
 
@@ -87,7 +87,7 @@
 **Key metrics:**
 - 3 services need logging fixes
 - 1 critical (Trader no docker logs)
-- 1 platform migration (Web UI: zerolog → slog)
+- 1 platform migration (Web UI: legacy logger → slog)
 - 1 enhancement (Web UI: access log split)
 
 ### 👨‍💻 Developer (Implementing Fixes)
@@ -98,7 +98,7 @@
 
 **Quick path:**
 ```
-CTS-Core fix:    1-2 days    (request_id + access/out_request split)
+CTS-Core fix:    1-2 days    (request_id + 6 log files: error/access/out_request/ws_access/ws_out/audit)
 Trader fix:      30 minutes  (identical to CTS-Core)
 Web UI fix:      2-3 days    (migration + features)
 Testing:         1 day       (validation + docker logs checks)
@@ -164,7 +164,8 @@ docker logs ct-system-web-ui-1 | jq . | head
     "module_support": true,
     "special_cases": {
       "web_ui": "split into access.log + error.log",
-      "hsm_service": "split into audit.log + access.log + error.log"
+      "hsm_service": "split into audit.log + access.log + error.log",
+      "cts_core": "split into error/access/out_request/ws_access/ws_out/audit"
     }
   }
 }
@@ -175,9 +176,9 @@ docker logs ct-system-web-ui-1 | jq . | head
 ## 🎯 Implementation Priority
 
 ### Priority 1: Critical (2-3 days)
-- [ ] CTS-Core: Add request_id + access/out_request split
+- [ ] CTS-Core: Add request_id + 6 log files (error/access/out_request/ws_access/ws_out/audit)
 - [ ] Trader: Add stdout + JSON (blocks docker logs debugging)
-- [ ] Web UI: Migrate zerolog → slog (external dependency removal)
+- [ ] Web UI: Migrate legacy logger → slog (external dependency removal)
 
 ### Priority 2: Scaling (1 day)
 - [ ] Web UI: Add access.log split (new analytics capability)
