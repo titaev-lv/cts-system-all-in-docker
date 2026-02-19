@@ -40,7 +40,7 @@
 
 **HSM Service:**
 - ✅ Production-ready (mTLS, key rotation, ACL, monitoring)
-- 🟡 Предложения: объединение CLI, multi-slot architecture
+- 🟡 Предложения: multi-slot architecture
 
 **Web UI (Go):**
 - ✅ Recovered core: authentication, users/groups, exchanges, exchange accounts
@@ -71,7 +71,7 @@
 
 **Основной дефект:** `docker logs ct-system-trader-daemon-1` **НЕ показывает логи**, потому что логирующие потоки идут только в файл и нет прав на запись.
 
-**Детальный анализ:** [LOGGING_ANALYSIS_DETAILED.md](LOGGING_ANALYSIS_DETAILED.md) (62 строк, чек-листы, примеры)
+**Детальный анализ:** [LOGGING.md](LOGGING.md) (актуальный единый summary + чек-листы)
 
 ### Требуемые изменения по сервисам
 
@@ -257,7 +257,7 @@ error.log.3.gz
 - Web UI: разделенные логи (access.log + error.log) для аналитики и отладки
 
 **Файлы:**
-- `/home/dev/docker/ct-system/LOGGING_ANALYSIS.md` (подробный анализ)
+- `/home/dev/docker/ct-system/LOGGING_QUICK_REFERENCE.md` (единый документ по логированию)
 - `services/cts-core/internal/logger/logger.go`
 - `services/trader-daemon/internal/logger/logger.go`
 - `services/web-ui-go/internal/logger/logger.go` (с access/error разделением)
@@ -691,7 +691,7 @@ gantt
 /home/dev/docker/ct-system/
 ├── DEVELOPMENT_PLAN.md          # ← Этот файл (общий план)
 ├── ARCHITECTURE.md              # Общая архитектура системы
-├── LOGGING_ANALYSIS.md          # Анализ логирования (можно удалить после P1)
+├── LOGGING_QUICK_REFERENCE.md   # Единый документ по логированию
 ├── HSM_ROTATION.md              # HSM key rotation (готово)
 ├── README.md                    # Quick start
 ├── docker-compose.yml           # Оркестрация

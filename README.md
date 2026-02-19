@@ -6,7 +6,7 @@
 
 - **[DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)** - Общий план разработки (начните отсюда!)
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - Архитектура системы
-- **[LOGGING_ANALYSIS.md](LOGGING_ANALYSIS.md)** - Анализ логирования (Priority 1)
+- **[LOGGING.md](LOGGING.md)** - Единый документ по логированию (Priority 1)
 - **[HSM_ROTATION.md](HSM_ROTATION.md)** - HSM key rotation (готово)
 - **services/\*/DEVELOPMENT_PLAN.md** - Детальные планы сервисов
 
