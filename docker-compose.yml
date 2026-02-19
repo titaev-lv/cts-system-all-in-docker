@@ -76,6 +76,7 @@ services:
       context: ./services/web-ui-go
       dockerfile: Dockerfile
     container_name: ct-system-web-ui
+    user: "${WEB_UI_UID:-1001}:${WEB_UI_GID:-1001}"
     depends_on:
       mysql:
         condition: service_healthy
@@ -114,7 +115,7 @@ services:
       context: ./services/cts-core
       dockerfile: Dockerfile
     container_name: ct-system-cts-core
-#    user: "0:0"
+    user: "${CTS_CORE_UID:-1001}:${CTS_CORE_GID:-1001}"
     depends_on:
       mysql:
         condition: service_healthy
@@ -156,16 +157,17 @@ services:
   # 5. Trader-1 (test)
 #  trader-1:
 #    build:
-#      context: ./services/trader-daemon
+#      context: ./services/trader
 #      dockerfile: Dockerfile
 #    container_name: ct-system-trader-1
+#    user: "${TRADER_UID:-1001}:${TRADER_GID:-1001}"
 #    depends_on:
 #      mysql:
 #        condition: service_healthy
 #    volumes:
-#      - ./services/trader-daemon/conf:/app/conf:ro
-#      - ./services/trader-daemon/logs:/app/logs
-#      - ./services/trader-daemon/state:/app/state
+#      - ./services/trader/conf:/app/conf:ro
+#      - ./services/trader/logs:/app/logs
+#      - ./services/trader/state:/app/state
 #    environment:
 #      - TZ=${TZ:-UTC}
 #    ports:
@@ -181,18 +183,19 @@ services:
 
   # trader-2:
   #   build:
-  #     context: ./services/trader-daemon
+  #     context: ./services/trader
   #     dockerfile: Dockerfile
   #   container_name: trader-2
+  #   user: "${TRADER_UID:-1001}:${TRADER_GID:-1001}"
   #   depends_on:
   #     cts-core:
   #       condition: service_healthy
   #     hsm:
   #       condition: service_healthy
   #   volumes:
-  #     - ./services/trader-daemon/conf:/app/conf:ro
-  #     - ./services/trader-daemon/logs:/app/logs
-  #     - ./services/trader-daemon/state:/app/state
+  #     - ./services/trader/conf:/app/conf:ro
+  #     - ./services/trader/logs:/app/logs
+  #     - ./services/trader/state:/app/state
   #   environment:
   #     - TRADER_ID=trader-2
   #     - TRADER_NAME=KuCoin-Trader-1
@@ -206,18 +209,19 @@ services:
 
   # trader-3:
   #   build:
-  #     context: ./services/trader-daemon
+  #     context: ./services/trader
   #     dockerfile: Dockerfile
   #   container_name: trader-3
+  #   user: "${TRADER_UID:-1001}:${TRADER_GID:-1001}"
   #   depends_on:
   #     cts-core:
   #       condition: service_healthy
   #     hsm:
   #       condition: service_healthy
   #   volumes:
-  #     - ./services/trader-daemon/conf:/app/conf:ro
-  #     - ./services/trader-daemon/logs:/app/logs
-  #     - ./services/trader-daemon/state:/app/state
+  #     - ./services/trader/conf:/app/conf:ro
+  #     - ./services/trader/logs:/app/logs
+  #     - ./services/trader/state:/app/state
   #   environment:
   #     - TRADER_ID=trader-3
   #     - TRADER_NAME=Bybit-Trader-1
