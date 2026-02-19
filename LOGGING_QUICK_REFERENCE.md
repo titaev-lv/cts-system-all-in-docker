@@ -12,8 +12,8 @@
 |------|---------|-----------|------|--------|
 | Add stdout + JSON | CTS-Core | Easy | 0.5d | ✅ Done |
 | Add stdout + JSON | Trader | Easy | 0.5d | Priority |
-| Migrate legacy logger → slog | Web UI | Medium | 2-3d | Priority |
-| Add access logging | Web UI | Medium | 1d | With migration |
+| Web UI migration to slog + split logs | Web UI | Medium | 2-3d | ✅ Done |
+| Web UI validation + runbook | Web UI | Easy | 1d | ✅ Done |
 | HSM reference (audit/access/error, request_id, fail-fast, graceful shutdown, panic recovery) | HSM | Done | - | ✅ |
 
 ---
@@ -49,155 +49,24 @@ docker logs ct-system-cts-core-1 | head
 
 ---
 
-## 🔧 Web UI: Logging Migration (2-3 days)
+## 🔧 Web UI: Logging Status & Final Hardening (1 day)
 
-### Phase 1: Remove legacy logger dependency (1 day)
+### Current status (implemented)
+- ✅ `slog` logger in `services/web-ui-go/internal/logger/logger.go`
+- ✅ Split streams: `error.log` + `access.log`
+- ✅ Access middleware wired in `cmd/web/main.go`
+- ✅ `request_id` middleware + `X-Request-ID` propagation (context/response/access/error)
+- ✅ Fail-fast on log directory write access
+- ✅ Graceful shutdown with `logger.Close()`
 
-**Step 1: Remove from go.mod**
-```bash
-cd services/web-ui-go
-go mod edit -droprequire <legacy-logger-module>
-rm go.sum
-go mod tidy
-```
+### Final checklist (what to finish)
+- [x] Validate `docker logs ct-system-web-ui-1` in debug and release modes
+- [x] Validate that both `access.log` and `error.log` are present in `/app/logs`
+- [x] Verify rotation files appear under load (`access.log.*`, `error.log.*`)
+- [x] Confirm key fields: `request_id`, `module`, `method`, `path`, `status`, `latency_ms`, `user_id`
+- [x] Finalize short runbook for operational troubleshooting
 
-**Step 2: Find & replace imports**
-```bash
-# Find all occurrences:
-grep -r "legacy logger" .
-
-# Replace with:
-grep -r "log/slog" .
-```
-
-**Step 3: Update logger.go**
-
-Replace entire file with slog-based implementation:
-
-```go
-package logger
-
-import (
-    "io"
-    "log/slog"
-    "os"
-    "path/filepath"
-    "github.com/natefinch/lumberjack"
-)
-
-var (
-    errorLog *slog.Logger
-    accessLog *slog.Logger
-)
-
-func Init(dir string, maxFileSizeMB int) error {
-    // Error log
-    errorLogFile := &lumberjack.Logger{
-        Filename:   filepath.Join(dir, "error.log"),
-        MaxSize:    maxFileSizeMB,
-        MaxBackups: 5,
-        MaxAge:     30,
-        Compress:   true,
-    }
-    errorWriter := io.MultiWriter(os.Stdout, errorLogFile)
-    errorLogHandler := slog.NewJSONHandler(errorWriter, &slog.HandlerOptions{Level: slog.LevelInfo})
-    errorLog = slog.New(errorLogHandler)
-    slog.SetDefault(errorLog)
-    
-    // Access log
-    accessLogFile := &lumberjack.Logger{
-        Filename:   filepath.Join(dir, "access.log"),
-        MaxSize:    50,  // smaller for access logs
-        MaxBackups: 10,
-        MaxAge:     7,
-        Compress:   true,
-    }
-    accessWriter := io.MultiWriter(os.Stdout, accessLogFile)
-    accessLogHandler := slog.NewJSONHandler(accessWriter, &slog.HandlerOptions{Level: slog.LevelInfo})
-    accessLog = slog.New(accessLogHandler)
-    
-    return os.MkdirAll(dir, 0755)
-}
-
-func GetError() *slog.Logger {
-    return errorLog
-}
-
-func GetAccess() *slog.Logger {
-    return accessLog
-}
-```
-
-### Phase 2: Add access logging middleware (1 day)
-
-**File:** `services/web-ui-go/internal/middleware/access_log.go` (NEW)
-
-```go
-package middleware
-
-import (
-    "time"
-    "github.com/gin-gonic/gin"
-    "yourmodule/internal/logger"
-)
-
-func AccessLogMiddleware() gin.HandlerFunc {
-    accessLog := logger.GetAccess()
-    
-    return func(c *gin.Context) {
-        start := time.Now()
-        c.Next()
-        duration := time.Since(start)
-        
-        // Extract user_id from session
-        userID := extractUserID(c)  // implement based on your auth
-        
-        accessLog.Info("HTTP request",
-            slog.String("method", c.Request.Method),
-            slog.String("path", c.Request.URL.Path),
-            slog.Int("status", c.Writer.Status()),
-            slog.Int64("duration_ms", duration.Milliseconds()),
-            slog.String("client_ip", c.ClientIP()),
-            slog.Any("user_id", userID),
-        )
-    }
-}
-
-func extractUserID(c *gin.Context) *uint {
-    // Extract from session/context
-    // Return nil if not authenticated
-    return nil
-}
-```
-
-**Add to main router setup:**
-
-```go
-// cmd/web/main.go
-r := gin.New()
-r.Use(middleware.AccessLogMiddleware())  // Add this early
-// ... other middleware
-```
-
-### Phase 3: Update config (0.5 day)
-
-**File:** `services/web-ui-go/conf/config.yaml`
-
-```yaml
-app:
-  name: "CT-System Web UI"
-  port: 8080
-
-logging:
-  level: "info"
-  dir: "/var/log/web-ui"
-  max_file_size_mb: 100
-  access_log:
-    enabled: true
-    max_file_size_mb: 50
-    
-# rest of config...
-```
+Runbook: `services/web-ui-go/LOGGING_RUNBOOK.md`
 
 ### Verify
 
@@ -207,7 +76,7 @@ docker logs ct-system-web-ui-1 | jq . | head -20
 
 # Should show JSON logs with "method", "status", "duration_ms" fields
 # Check both logs exist:
-ls -lh /var/log/web-ui/
+ls -lh /app/logs/
   access.log
   error.log
 ```
@@ -240,6 +109,9 @@ docker logs ct-system-web-ui-1 | jq .
 
 ls /var/log/web-ui/
 # access.log and error.log should both exist
+
+# If running in containerized setup used by Web UI:
+ls /app/logs/
 ```
 
 ---

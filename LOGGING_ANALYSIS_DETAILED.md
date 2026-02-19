@@ -4,16 +4,16 @@
 
 | Параметр | HSM Service | CTS-Core | Trader | Web UI (Go) |
 |----------|------------|----------|--------|------------|
-| **Библиотека** | `slog` ✅ | `slog` ✅ | `slog` ✅ | external logger ❌ |
+| **Библиотека** | `slog` ✅ | `slog` ✅ | `slog` ✅ | `slog` ✅ |
 | **Формат** | JSON | JSON | Text (plain) | JSON/Text |
 | **Ротация** | `lumberjack` ✅ | `lumberjack` ✅ | Кастомный | `lumberjack` ✅ |
 | **MultiWriter** | Да (stdout+file) | Да (stdout+file) | Да (file) | Да (stdout+file) |
-| **Модульность** | ✅ module tags | ✅ module tag (Get("module")) | ✅ module tag (Get("module")) | Нет ❌ |
-| **Access Log** | access.log | access.log + ws_access.log (wired) | - | ❌ Не разделены |
-| **Error Log** | error.log + audit.log | error.log + audit.log (wired) | - | ❌ Не разделены |
+| **Модульность** | ✅ module tags | ✅ module tag (Get("module")) | ✅ module tag (Get("module")) | ✅ module auto + override |
+| **Access Log** | access.log | access.log + ws_access.log (wired) | - | ✅ access.log |
+| **Error Log** | error.log + audit.log | error.log + audit.log (wired) | - | ✅ error.log |
 | **Проверка прав** | ✅ Fail-fast | ✅ Fail-fast | ✅ MkdirAll | ✅ MkdirAll |
-| **Graceful shutdown** | ✅ SIGTERM/SIGINT + Shutdown(ctx) + Close | ✅ SIGTERM/SIGINT + Shutdown(ctx) + Close | ⚠️ Только Close | ❌ Нет |
-| **Защита от паник** | ✅ Recovery middleware | ✅ Recovery middleware | Кастомный plain handler | legacy logger default |
+| **Graceful shutdown** | ✅ SIGTERM/SIGINT + Shutdown(ctx) + Close | ✅ SIGTERM/SIGINT + Shutdown(ctx) + Close | ⚠️ Только Close | ✅ SIGTERM/SIGINT + Shutdown(ctx) + Close |
+| **Защита от паник** | ✅ Recovery middleware | ✅ Recovery middleware | Кастомный plain handler | ✅ Recovery middleware |
 
 ---
 
@@ -133,27 +133,19 @@ Trade := logger.Get("trade")
 
 ---
 
-### 4. Web UI (Go) ❌ (Нужна коренная переделка)
+### 4. Web UI (Go) ✅ (Унификация и hardening завершены)
 
-**Плюсы:**
-- ✅ legacy logger (похожа на slog, но внешняя зависимость)
+**Что реализовано:**
+- ✅ `slog` (stdlib), отказ от legacy logger API
+- ✅ разделение `access.log` / `error.log`
+- ✅ stdout + file (`output: both`)
 - ✅ lumberjack ротация
-- ✅ stdout + file
-
-**Минусы:**
-- ❌ legacy logger вместо `slog` (не стандартная библиотека, зависимость)
-- ❌ Нет модульного логирования (компоненты не различимы в логах)
-- ❌ Модульность HTTP запросов требует разделения на access/error logы
-- ❌ Нет graceful shutdown логирования
-- ❌ Нет проверки доступа на запись директории перед использованием
-- ❌ Жестко в FormData() просит все параметры - нет возможности пропустить нужно обновить на SetEnvKeyReplacer
-
-**Initialization код:**
-```go
-// cmd/web/main.go lines 40-45
-logger.Init() // Без параметров
-log := logger.Get() // Глобальный логгер, нет модульности
-```
+- ✅ fail-fast проверка записи в log directory
+- ✅ graceful shutdown + `logger.Close()`
+- ✅ module tagging (auto + manual override)
+- ✅ `request_id` middleware (`X-Request-ID`) + context/response/access/error/recovery propagation
+- ✅ docker regression-валидация (debug/release)
+- ✅ runbook: `services/web-ui-go/LOGGING_RUNBOOK.md`
 
 ---
 
@@ -283,28 +275,27 @@ logs/
 - [ ] **НУЖНО СДЕЛАТЬ**: Завершить реализацию Trade модуля логирования
 
 ### Web UI (Go)
-- [ ] **НУЖНО СДЕЛАТЬ**: Заменить legacy logger на slog
-- [ ] **НУЖНО СДЕЛАТЬ**: Удалить зависимость legacy logger
-- [ ] **НУЖНО СДЕЛАТЬ**: Добавить модульное логирование
-- [ ] **НУЖНО СДЕЛАТЬ**: Разделить логи на access.log + error.log
-- [ ] **НУЖНО СДЕЛАТЬ**: Добавить graceful shutdown (defer logger.Close())
-- [ ] **НУЖНО СДЕЛАТЬ**: Добавить проверку доступа на запись
-- [ ] **НУЖНО СДЕЛАТЬ**: Добавить request logging middleware для access.log
+- [x] `slog` + split `access.log`/`error.log`
+- [x] graceful shutdown + `logger.Close()`
+- [x] проверка доступа на запись (fail-fast)
+- [x] request logging middleware (`access_log.go`)
+- [x] модульные теги
+- [x] финальная docker regression-валидация
+- [x] финальная эксплуатационная документация (runbook)
 
 ---
 
 ## 🔧 Порядок миграции
 
-### Phase 1: Web UI (критичный для стандартизации)
-1. Заменить legacy logger → slog
-2. Добавить разделение access/error логов
-3. Модульное логирование (module в каждом компоненте)
-
-### Phase 2: CTS-Core + Trader
+### Phase 1: Trader + CTS-Core (критично)
 1. Заменить rotatedFile → lumberjack
 2. Изменить text → JSON
 3. Добавить stdout + file
 4. Добавить проверку прав на запись
+
+### Phase 2: Web UI (полировка)
+1. ✅ docker regression checks
+2. ✅ runbook и эксплуатационная документация
 
 ### Phase 3: HSM Service
 1. ✅ Выполнено: audit/access/error, request_id, fail-fast, graceful shutdown, panic recovery

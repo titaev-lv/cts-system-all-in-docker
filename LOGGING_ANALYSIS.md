@@ -129,47 +129,37 @@ Failed to init logger: open logs/error.log: permission denied
 
 ---
 
-### ✅ Web UI (работает корректно)
+### ✅ Web UI (реализация унифицирована)
 
 **Файл:** `services/web-ui-go/internal/logger/logger.go`
 
-**Библиотека:** external logger (внешняя зависимость)
+**Библиотека:** `log/slog` (standard library)
 
 **Конфигурация:** (из `/app/config/config.yaml`)
 ```yaml
 logging:
-  level: "debug"
-  format: "text"      # Text формат (читаемый)
-  output: "both"      # ✅ stdout + file
-  file: "./logs/ct-system.log"
+    level: "debug"
+    format: "json"      # JSON (text допустим для debug)
+    output: "both"      # ✅ stdout + file
+    file: "/app/logs/error.log"
   max_size: 100
   max_backups: 5
   max_age: 30
   compress: true
 ```
 
-**Вывод (псевдокод):**
-```go
-var writers []io.Writer
-
-if logCfg.Output == "stdout" || logCfg.Output == "both" {
-    writers = append(writers, os.Stdout)
-}
-
-if logCfg.Output == "file" || logCfg.Output == "both" {
-    fileWriter := &lumberjack.Logger{ /* ... */ }
-    writers = append(writers, fileWriter)
-}
-
-multiWriter := io.MultiWriter(writers...)
-logger = NewLogger(multiWriter)
-```
+**Ключевые особенности:**
+- `error.log` + `access.log` с раздельной ротацией
+- `stdout + file` через MultiWriter
+- fail-fast проверка записи в директорию логов
+- graceful shutdown (`SIGTERM/SIGINT`, `server.Shutdown`, `logger.Close()`)
+- модульные теги (`module`, авто + ручной override)
 
 **Куда пишет:**
 - ✅ **stdout** (виден в `docker logs`)
-- ✅ **file** `./logs/ct-system.log`
+- ✅ **file** `/app/logs/error.log` и `/app/logs/access.log`
 
-**Формат:** Text (console writer с цветами)
+**Формат:** JSON (по умолчанию), text опционально
 
 **Ротация:** lumberjack (100MB, 5 backup, 30 дней, сжатие)
 
@@ -180,17 +170,7 @@ logger = NewLogger(multiWriter)
 [GIN-debug] Listening and serving HTTP on 0.0.0.0:80
 ```
 
-**Плюсы:**
-- ✅ Работает с `docker logs`
-- ✅ Читаемый формат для разработки
-- ✅ Дублирование в файл
-
-**Минусы:**
-- ⚠️ Отличается от остальных (legacy logger vs slog)
-- ⚠️ Text формат сложнее парсить автоматически (лучше JSON)
-- ⚠️ Дополнительная зависимость (не stdlib)
-
-**Docker compatibility:** ✅ ХОРОШО (но лучше унифицировать на JSON)
+**Docker compatibility:** ✅ ОТЛИЧНО
 
 ---
 
@@ -199,7 +179,7 @@ logger = NewLogger(multiWriter)
 | Сервис | Библиотека | stdout | file | Формат | Docker logs | Статус |
 |--------|-----------|--------|------|--------|-------------|--------|
 | **HSM** | slog (stdlib) | ✅ | ✅ | JSON | ✅ Работает | ✅ Эталон |
-| **Web UI** | external logger | ✅ | ✅ | Text | ✅ Работает | ⚠️ Унифицировать |
+| **Web UI** | slog (stdlib) | ✅ | ✅ | JSON | ✅ Работает | ✅ Готово |
 | **CTS-Core** | slog (stdlib) | ✅ | ✅ | JSON | ✅ Работает | ⚠️ Почти готово |
 | **Trader** | slog (stdlib) | ❌ | ❌ | Text | ❌ Permission denied | ❌ Критично |
 
@@ -371,25 +351,20 @@ go get gopkg.in/natefinch/lumberjack.v2
 **Проверить текущую конфигурацию:**
 
 ```bash
-docker exec ct-system-web-ui cat /app/conf/config.yaml | grep -A 15 "logging:"
+docker exec ct-system-web-ui cat /app/config/config.yaml | grep -A 20 "logging:"
 ```
 
-**Если output = "file":**
+Проверить, что включены оба потока (`error.log` + `access.log`):
 
-Изменить в `services/web-ui-go/conf/config.yaml`:
+`services/web-ui-go/config/config.yaml`:
 ```yaml
 logging:
-  level: info
-  format: json         # JSON для структурированных логов
-  output: both         # stdout + file для Docker
-  file: logs/web-ui.log
-  max_size: 100
-  max_backups: 10
-  max_age: 30
-  compress: true
+    output: "both"
+    file: "/app/logs/error.log"
+    access_file: "/app/logs/access.log"
 ```
 
-**Опционально:** Мигрировать на slog (как все остальные)
+**Статус:** миграция Web UI на `slog` уже выполнена
 
 ---
 
@@ -399,12 +374,12 @@ logging:
 
 1. ❌ **Trader-1** - КРИТИЧНО: Исправить permission denied + добавить stdout
 2. ⚠️ **CTS-Core** - Заменить WS stub на полноценный протокол
-3. ✅ **Web UI** - Уже работает, но можно унифицировать на JSON
+3. ✅ **Web UI** - Унификация выполнена (`slog` + split logs)
 
-### Приоритет 2 (унификация)
+### Приоритет 2 (полировка)
 
-4. Мигрировать Web UI с legacy logger на slog (опционально)
-5. Обновить документацию по логированию
+4. Web UI: финальная валидация docker debug/release
+5. Обновить эксплуатационную документацию по логированию
 6. Настроить centralized logging (ELK/Loki)
 
 ---
@@ -469,10 +444,11 @@ docker logs ct-system-cts-core --tail 10 | jq '.'
    - slog + JSON + stdout + file
    - Работает идеально с Docker
 
-2. **Web UI** - работает хорошо ✅
-    - legacy logger + text + stdout + file
-   - Логи видны в docker logs
-   - Можно унифицировать на slog + JSON
+2. **Web UI** - унифицирован ✅
+    - slog + access/error split + stdout + file
+    - Логи видны в docker logs
+    - ✅ Финальная docker-валидация (debug/release) выполнена
+    - ✅ Runbook добавлен: `services/web-ui-go/LOGGING_RUNBOOK.md`
 
 3. **CTS-Core** - базовая унификация выполнена ✅
     - slog + JSON + stdout + lumberjack
@@ -496,17 +472,17 @@ docker logs ct-system-cts-core --tail 10 | jq '.'
 | Сервис | Docker Logs | Статус | Действия |
 |--------|------------|--------|----------|
 | **HSM** | ✅ Работают | ✅ Отлично | Нет, это эталон |
-| **Web UI** | ✅ Работают | ✅ Хорошо | Опционально: JSON вместо text |
+| **Web UI** | ✅ Работают | ✅ Отлично | Нет (hardening закрыт) |
 | **CTS-Core** | ✅ Работают | ⚠️ Почти готово | WS протокол |
 | **Trader-1** | ❌ Permission denied | ❌ Критично | 1) Исправить права<br>2) Добавить stdout |
 
 **Общая оценка:** 3/4 сервисов работают корректно с Docker логированием.
 
 **Приоритет действий:**
-1. 🔴 Trader: Исправить permission denied (chmod 777 logs/)
+1. 🔴 Trader: Исправить permission denied (non-root user mapping + безопасные права bind-mount)
 2. 🔴 Trader: Добавить stdout + JSON + lumberjack
 3. 🟡 CTS-Core: WS protocol
-4. 🟢 Web UI: Опционально сменить text на json
-5. 🟢 Все: Унифицировать на slog stdlib
+4. 🟢 Web UI: поддерживать runbook и регрессионные проверки при изменениях
+5. 🟢 Все: поддерживать единый slog/stdout/file стандарт
 
 **Ожидаемый результат:** Все 4 сервиса выводят логи в `docker logs` в JSON формате.

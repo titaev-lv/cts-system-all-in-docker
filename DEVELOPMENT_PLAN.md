@@ -46,7 +46,7 @@
 - ✅ Recovered core: authentication, users/groups, exchanges, exchange accounts
 - 🔴 Missing in recovered code: positions, market analysis, daemon, coins
 - ⏳ Phase 4.1 analytics: not implemented in recovered code
-- 🔴 Миграция логирования на slog (обязательно, равнение на hsm-service)
+- ✅ Логирование унифицировано: `slog` + `access.log/error.log` + fail-fast + graceful shutdown
 
 ---
 
@@ -67,7 +67,7 @@
 | HSM | ✅ slog | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
 | CTS-Core | ✅ slog | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
 | Trader | ✅ slog | ❌ Text | ❌ | ✅ | ❌ Custom | ❌ Нет логов |
-| Web UI | ❌ external logger | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
+| Web UI | ✅ slog | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
 
 **Основной дефект:** `docker logs ct-system-trader-daemon-1` **НЕ показывает логи**, потому что логирующие потоки идут только в файл и нет прав на запись.
 
@@ -135,51 +135,36 @@ Priority: HIGH
 Complexity: Medium (library migration + stream splitting)
 Impact: Unified with other services + new access log analytics
 
-[ ] PHASE 1: Migration from legacy logger → slog (1 day)
-    [ ] Remove legacy logger from go.mod
-    [ ] Replace legacy logger imports with `log/slog`
-    [ ] Update all logger.Get() calls to slog.Default() / slog.With("module", "...")
-    [ ] Test: make test (all tests must pass)
+[x] PHASE 1: Migration from legacy logger → slog (DONE)
+    [x] Remove legacy logger API usage
+    [x] Use `log/slog` logger wrapper
 
-[ ] PHASE 2: Implement Access Log Splitting (1-2 days)
-    [ ] Create internal/logger/access_logger.go
-        - Separate slog.Logger for HTTP request logging
-        - Format: method, path, status, duration_ms, client_ip, user_id
-        
-    [ ] Create internal/logger/error_logger.go
-        - Main slog.Logger for app errors
-        - Format: level, message, module, error, context
-        
-    [ ] Create internal/middleware/access_log_middleware.go
-        - Gin middleware to capture all HTTP requests
-        - Log method, path, status, latency, IP
-        
-    [ ] Update lumberjack config:
-        - access.log: 50MB max, keep 10, 7 days
-        - error.log: 100MB max, keep 5, 30 days
-        
-    [ ] Test:
-        - docker logs | grep "HTTP\|error"
-        - Check /var/log/web-ui/ has both access.log and error.log
+[x] PHASE 2: Implement Access Log Splitting (DONE)
+    [x] `error.log` + `access.log`
+    [x] `internal/middleware/access_log.go`
+    [x] module tags + user_id in access log
+    [x] lumberjack rotation (separate policies)
 
-[ ] Configuration:
+[ ] PHASE 3: Final hardening (1 day)
+    [x] add `request_id` middleware (`X-Request-ID`)
+    [x] propagate `request_id` to access + error logs and response header
+    [x] docker debug/release regression checks
+    [x] short runbook for logging troubleshooting
+
+[x] Configuration:
     - logging:
-        level: "info"
-        dir: "/var/log/web-ui"
-        format: "json"
-        max_file_size_mb: 100
-        access_log:
-          enabled: true
-          max_file_size_mb: 50
-          max_backups: 10
-          max_age_days: 7
+                level: "info"
+                format: "json" | "text"
+                output: "stdout" | "file" | "both"
+                file: "/app/logs/error.log"
+                access_file: "/app/logs/access.log"
+                max_size/max_backups/max_age
 
-[ ] Files to create/modify:
-    - services/web-ui-go/internal/logger/logger.go (REWRITE)
-    - services/web-ui-go/internal/logger/access_logger.go (NEW)
-    - services/web-ui-go/internal/logger/error_logger.go (NEW)
-    - services/web-ui-go/internal/middleware/access_log.go (NEW)
-    - services/web-ui-go/conf/config.yaml (update logging section)
+[x] Files created/modified:
+    - services/web-ui-go/internal/logger/logger.go
+    - services/web-ui-go/internal/middleware/access_log.go
+    - services/web-ui-go/cmd/web/main.go
+    - services/web-ui-go/config/config.yaml
 ```
 
 **Detailed guide:** See [services/web-ui-go/DEVELOPMENT_PLAN.md](services/web-ui-go/DEVELOPMENT_PLAN.md) Section 2 "КРИТИЧНО: Унификация логирования"
@@ -585,25 +570,21 @@ error.log.3.gz
 
 ---
 
-#### 6.3. Logging Migration на slog (1 день)
+#### 6.3. Logging hardening (1 день)
 
 **Цель:** Единый подход к логированию во всей системе
 
 **Текущее состояние:**
-- Web UI использует legacy logger (text format)
+- Web UI уже использует `slog` + split logs
 - Конфигурация: `logging.output: "both"` (stdout + file)
-- ✅ Работает корректно, логи видны в docker logs
+- ✅ Логи видны в docker logs
 
 **Задачи:**
 ```
-[ ] Заменить legacy logger на log/slog
-[ ] Переключить на JSON формат (slog.NewJSONHandler)
-[ ] Использовать lumberjack для ротации (как в HSM)
-[ ] Обновить internal/logger/logger.go
-[ ] Обновить конфигурацию (logging.format: "json")
-[ ] Удалить зависимость legacy logger из go.mod
-[ ] Tests: logging initialization, format, rotation
-[ ] Документация: обновить LOGGING.md
+[ ] Regression tests: debug/release logging profiles
+[ ] Проверить ротацию под нагрузкой
+[ ] Финализировать runbook (операционные инциденты)
+[ ] Синхронизировать корневые logging документы
 ```
 
 **Приоритет:** LOW (работает, но для единообразия желательно)
@@ -734,7 +715,7 @@ gantt
         │   │   ├── USER_CONTROLLER.md
         │   │   └── GROUP_CONTROLLER.md
         │   └── logger/
-        │       └── LOGGING.md         # Web UI logging (legacy)
+        │       └── LOGGING.md         # Web UI logging (slog)
         └── config/
             └── config.yaml            # Web UI configuration
 ```
@@ -817,7 +798,7 @@ make up
 - Начать Priority 2: Phase 1.4 State Management
 
 **Вопросы для обсуждения:**
-- Web UI: мигрировать на slog или оставить legacy logger?
+- Web UI: нужна ли отдельная структура полей для SIEM/ELK?
 - Trader config: INI → YAML приоритет?
 - CI/CD: какой pipeline предпочтительнее? (GitHub Actions, GitLab CI, Jenkins)
 

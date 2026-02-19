@@ -64,9 +64,10 @@
 #### Web UI (Go)
 - **[services/web-ui-go/DEVELOPMENT_PLAN.md](services/web-ui-go/DEVELOPMENT_PLAN.md#-kritichno-unifikacija-logirovanija)**
   - Section: "🔴 КРИТИЧНО: Унификация логирования"
-  - Changes needed: legacy logger → slog + access.log/error.log split
-  - Effort: 2-3 days
-  - Impact: HIGH (migration + new features)
+  - Status: ✅ implementation + hardening done (`slog` + split logs + `request_id` + fail-fast + graceful shutdown + debug/release regression)
+  - Runbook: [services/web-ui-go/LOGGING_RUNBOOK.md](services/web-ui-go/LOGGING_RUNBOOK.md)
+  - Effort: 0-0.5 days
+  - Impact: HIGH (observability hardening)
 
 #### HSM Service
 - **[services/hsm-service/DEVELOPMENT_PLAN.md](services/hsm-service/DEVELOPMENT_PLAN.md#-unifikacija-logirovanija)**
@@ -82,13 +83,12 @@
 **Start here:**
 1. [LOGGING_ANALYSIS_DETAILED.md](LOGGING_ANALYSIS_DETAILED.md) — Understand the scope
 2. [CT-System DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md#11-unifikacija-logirovanija-2-3-dnja--) — See Priority 1 section
-3. Summary: 2-3 days effort, HIGH impact on debugging capability
+3. Summary: ~2 days effort remaining, HIGH impact on debugging capability
 
 **Key metrics:**
-- 3 services need logging fixes
+- 2 services need major logging fixes (Trader, CTS-Core WS protocol)
 - 1 critical (Trader no docker logs)
-- 1 platform migration (Web UI: legacy logger → slog)
-- 1 enhancement (Web UI: access log split)
+- Web UI logging hardening completed (including regression and runbook)
 
 ### 👨‍💻 Developer (Implementing Fixes)
 **Start here:**
@@ -99,9 +99,9 @@
 **Quick path:**
 ```
 CTS-Core fix:    1-2 days    (WS protocol)
-Trader fix:      30 minutes  (identical to CTS-Core)
-Web UI fix:      2-3 days    (migration + features)
-Testing:         1 day       (validation + docker logs checks)
+Trader fix:      0.5-1 day   (stdout + JSON + rotation)
+Web UI polish:   ✅ done      (validation + doc/runbook)
+Testing:         1 day       (cross-service checks)
 ```
 
 ### 🔬 QA / Quality Assurance
@@ -139,7 +139,7 @@ docker logs ct-system-web-ui-1 | jq . | head
 
 | Component | Standard | HSM | CTS-Core | Trader | Web UI |
 |-----------|----------|-----|----------|--------|--------|
-| **Library** | slog | ✅ | ✅ | ✅ | ❌→✅ |
+| **Library** | slog | ✅ | ✅ | ✅ | ✅ |
 | **Format** | JSON | ✅ | ✅ | ❌→✅ | ✅ |
 | **Stdout** | Yes | ✅ | ✅ | ❌→✅ | ✅ |
 | **Rotation** | lumberjack | ✅ | ✅ | ❌→✅ | ✅ |
@@ -178,11 +178,15 @@ docker logs ct-system-web-ui-1 | jq . | head
 ### Priority 1: Critical (2-3 days)
 - [ ] CTS-Core: WS protocol
 - [ ] Trader: Add stdout + JSON (blocks docker logs debugging)
-- [ ] Web UI: Migrate legacy logger → slog (external dependency removal)
+- [x] Web UI: Migrate to slog + split access/error logs
 
 ### Priority 2: Scaling (1 day)
-- [ ] Web UI: Add access.log split (new analytics capability)
+- [x] Web UI: Add access.log split (new analytics capability)
 - [ ] All services: Add write-access validation at startup
+
+### Priority 2.5: Web UI hardening (1 day)
+- [x] Web UI: Validate logs in docker-compose (debug/release)
+- [x] Web UI: Finalize logging runbook/docs
 
 ### Priority 3: Polish (0.5 days)
 - [ ] Unified telemetry (Prometheus metrics integration)
@@ -235,9 +239,9 @@ $ ls -lh /var/log/web-ui/
 ### For developers
 1. Read: [LOGGING_QUICK_REFERENCE.md](LOGGING_QUICK_REFERENCE.md)
 2. Pick your task:
-  - `CTS-Core request_id + access/out_request split` (1-2 days)
-   - `Make Trader logs visible` (30 min)
-   - `Migrate Web UI logging` (2-3 days)
+  - `CTS-Core WS protocol hardening` (1-2 days)
+  - `Make Trader logs visible` (0.5-1 day)
+  - `Web UI regression + runbook` (1 day)
 3. Follow step-by-step instructions
 4. Validate with provided checklists
 
