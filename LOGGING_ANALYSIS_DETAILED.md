@@ -9,8 +9,8 @@
 | **Ротация** | `lumberjack` ✅ | `lumberjack` ✅ | Кастомный | `lumberjack` ✅ |
 | **MultiWriter** | Да (stdout+file) | Да (stdout+file) | Да (file) | Да (stdout+file) |
 | **Модульность** | ✅ module tags | ✅ module tag (Get("module")) | ✅ module tag (Get("module")) | Нет ❌ |
-| **Access Log** | access.log | access.log + ws_access.log (target) | - | ❌ Не разделены |
-| **Error Log** | error.log + audit.log | error.log + audit.log (target) | - | ❌ Не разделены |
+| **Access Log** | access.log | access.log + ws_access.log (configured) | - | ❌ Не разделены |
+| **Error Log** | error.log + audit.log | error.log + audit.log (configured) | - | ❌ Не разделены |
 | **Проверка прав** | ✅ Fail-fast | ✅ Fail-fast | ✅ MkdirAll | ✅ MkdirAll |
 | **Graceful shutdown** | ✅ SIGTERM/SIGINT + Shutdown(ctx) + Close | ⚠️ Только Close | ⚠️ Только Close | ❌ Нет |
 | **Защита от паник** | ✅ Recovery middleware | ❌ Нет | Кастомный plain handler | legacy logger default |
@@ -59,8 +59,8 @@ accessLogger := slog.New(slog.NewJSONHandler(accessWriter, opts))
 - ✅ Graceful shutdown (частично): `defer logger.Close()`
 
 **Минусы:**
-- ❌ Нет разделения error/access/out_request/ws_access/ws_out/audit
-- ❌ Нет request_id и middleware для его прокидывания
+- ⚠️ Разделение логов реализовано на уровне логгеров/конфига, но нет middleware/handlers
+- ⚠️ request_id middleware добавлен, но нет проброса в access/error/out_request
 - ❌ Нет обработки SIGTERM/SIGINT и Shutdown(ctx) как в HSM (нужно унифицировать)
 
 **Initialization код (обновлено):**
@@ -68,14 +68,20 @@ accessLogger := slog.New(slog.NewJSONHandler(accessWriter, opts))
 // cmd/cts-core/main.go
 cfg, err := config.Load(*configPath)
 // ... handle err
-if err := logger.Init(
-    cfg.Logging.Level,
-    cfg.Logging.Dir,
-    cfg.Logging.MaxFileSizeMB,
-    cfg.Logging.MaxBackups,
-    cfg.Logging.MaxAgeDays,
-    cfg.Logging.Compress,
-); err != nil {
+if err := logger.InitWithOptions(logger.Options{
+    Level:          cfg.Logging.Level,
+    Dir:            cfg.Logging.Dir,
+    MaxFileSizeMB:  cfg.Logging.MaxFileSizeMB,
+    MaxBackups:     cfg.Logging.MaxBackups,
+    MaxAgeDays:     cfg.Logging.MaxAgeDays,
+    Compress:       cfg.Logging.Compress,
+    ErrorPath:      cfg.Logging.ErrorPath,
+    AccessPath:     cfg.Logging.AccessPath,
+    OutRequestPath: cfg.Logging.OutRequestPath,
+    WSAccessPath:   cfg.Logging.WSAccessPath,
+    WSOutPath:      cfg.Logging.WSOutPath,
+    AuditPath:      cfg.Logging.AuditPath,
+}); err != nil {
     fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
     os.Exit(1)
 }

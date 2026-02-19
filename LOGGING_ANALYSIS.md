@@ -57,6 +57,7 @@ Log = slog.New(slog.NewJSONHandler(writer, &slog.HandlerOptions{Level: logLevel,
 
 **Куда пишет:**
 - ✅ **stdout + файл** `logs/error.log`
+ - ✅ **логгеры для 6 файлов** (access/out_request/ws_access/ws_out/audit) сконфигурированы
 
 **Целевая схема для CTS-Core (6 файлов):**
 - error.log
@@ -71,8 +72,8 @@ Log = slog.New(slog.NewJSONHandler(writer, &slog.HandlerOptions{Level: logLevel,
 **Ротация:** lumberjack
 
 **Проблемы:**
-- ❌ Нет разделения error/access/out_request/ws_access/ws_out/audit
-- ❌ Нет request_id и middleware для его прокидывания
+- ⚠️ Разделение логов реализовано на уровне логгеров/конфига, но нет middleware/handlers
+- ⚠️ request_id middleware добавлен, но нет проброса в access/error/out_request
 - ❌ Нет полного graceful shutdown (SIGTERM/SIGINT + Shutdown(ctx)) как в HSM
 
 **Docker compatibility:** ✅ ХОРОШО

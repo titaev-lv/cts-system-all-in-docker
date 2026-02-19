@@ -85,8 +85,10 @@ Effort: 1-2 дня
 [x] Переключить на JSON формат (slog.NewJSONHandler)
 [x] Заменить custom rotatedFile на lumberjack
 
-[ ] Добавить request_id (X-Request-ID) и проброс в логи
-[ ] Разделить access/error/out_request логи
+[x] Добавить request_id middleware (X-Request-ID)
+[x] Разделить loggers/files для error/access/out_request/ws_access/ws_out/audit
+[ ] Проброс request_id в access/error/out_request
+[ ] Подключить access/out_request/ws/audit логирование в обработчиках
     
 [ ] Тестирование:
     - docker-compose up cts-core-1

@@ -50,7 +50,7 @@
 #### CTS-Core
 - **[services/cts-core/DEVELOPMENT_PLAN.md](services/cts-core/DEVELOPMENT_PLAN.md#3-unifikacija-logirovanija)**
   - Section: "3. 📊 Унификация логирования"
-  - Changes needed: Add request_id + split into error/access/out_request/ws_access/ws_out/audit
+  - Changes needed: Wire request_id + handlers for access/out_request/ws/audit
   - Effort: 1-2 days
   - Impact: MEDIUM (observability improvements)
 
@@ -98,7 +98,7 @@
 
 **Quick path:**
 ```
-CTS-Core fix:    1-2 days    (request_id + 6 log files: error/access/out_request/ws_access/ws_out/audit)
+CTS-Core fix:    1-2 days    (wire request_id + access/out_request/ws/audit handlers)
 Trader fix:      30 minutes  (identical to CTS-Core)
 Web UI fix:      2-3 days    (migration + features)
 Testing:         1 day       (validation + docker logs checks)
@@ -176,7 +176,7 @@ docker logs ct-system-web-ui-1 | jq . | head
 ## 🎯 Implementation Priority
 
 ### Priority 1: Critical (2-3 days)
-- [ ] CTS-Core: Add request_id + 6 log files (error/access/out_request/ws_access/ws_out/audit)
+- [ ] CTS-Core: Wire request_id + access/out_request/ws/audit handlers
 - [ ] Trader: Add stdout + JSON (blocks docker logs debugging)
 - [ ] Web UI: Migrate legacy logger → slog (external dependency removal)
 
