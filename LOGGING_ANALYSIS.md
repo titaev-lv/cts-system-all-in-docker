@@ -149,15 +149,16 @@ logging:
 ```
 
 **Ключевые особенности:**
-- `error.log` + `access.log` с раздельной ротацией
+- `error.log` + `access.log` + `audit.log` с раздельной ротацией
 - `stdout + file` через MultiWriter
 - fail-fast проверка записи в директорию логов
 - graceful shutdown (`SIGTERM/SIGINT`, `server.Shutdown`, `logger.Close()`)
 - модульные теги (`module`, авто + ручной override)
+- Web-oriented audit middleware (auth + mutating actions)
 
 **Куда пишет:**
 - ✅ **stdout** (виден в `docker logs`)
-- ✅ **file** `/app/logs/error.log` и `/app/logs/access.log`
+- ✅ **file** `/app/logs/error.log`, `/app/logs/access.log`, `/app/logs/audit.log`
 
 **Формат:** JSON (по умолчанию), text опционально
 

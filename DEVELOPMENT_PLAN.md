@@ -142,6 +142,7 @@ Impact: Unified with other services + new access log analytics
 [x] PHASE 2: Implement Access Log Splitting (DONE)
     [x] `error.log` + `access.log`
     [x] `internal/middleware/access_log.go`
+    [x] `audit.log` + `internal/middleware/audit_log.go`
     [x] module tags + user_id in access log
     [x] lumberjack rotation (separate policies)
 
@@ -158,11 +159,13 @@ Impact: Unified with other services + new access log analytics
                 output: "stdout" | "file" | "both"
                 file: "/app/logs/error.log"
                 access_file: "/app/logs/access.log"
+                audit_file: "/app/logs/audit.log"
                 max_size/max_backups/max_age
 
 [x] Files created/modified:
     - services/web-ui-go/internal/logger/logger.go
     - services/web-ui-go/internal/middleware/access_log.go
+    - services/web-ui-go/internal/middleware/audit_log.go
     - services/web-ui-go/cmd/web/main.go
     - services/web-ui-go/config/config.yaml
 ```

@@ -137,13 +137,14 @@ Trade := logger.Get("trade")
 
 **Что реализовано:**
 - ✅ `slog` (stdlib), отказ от legacy logger API
-- ✅ разделение `access.log` / `error.log`
+- ✅ разделение `access.log` / `error.log` / `audit.log`
 - ✅ stdout + file (`output: both`)
 - ✅ lumberjack ротация
 - ✅ fail-fast проверка записи в log directory
 - ✅ graceful shutdown + `logger.Close()`
 - ✅ module tagging (auto + manual override)
 - ✅ `request_id` middleware (`X-Request-ID`) + context/response/access/error/recovery propagation
+- ✅ Web-oriented audit middleware (auth + mutating actions)
 - ✅ docker regression-валидация (debug/release)
 - ✅ runbook: `services/web-ui-go/LOGGING_RUNBOOK.md`
 
@@ -275,10 +276,11 @@ logs/
 - [ ] **НУЖНО СДЕЛАТЬ**: Завершить реализацию Trade модуля логирования
 
 ### Web UI (Go)
-- [x] `slog` + split `access.log`/`error.log`
+- [x] `slog` + split `access.log`/`error.log`/`audit.log`
 - [x] graceful shutdown + `logger.Close()`
 - [x] проверка доступа на запись (fail-fast)
 - [x] request logging middleware (`access_log.go`)
+- [x] audit middleware (`audit_log.go`)
 - [x] модульные теги
 - [x] финальная docker regression-валидация
 - [x] финальная эксплуатационная документация (runbook)

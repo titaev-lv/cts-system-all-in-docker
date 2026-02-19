@@ -64,7 +64,7 @@
 #### Web UI (Go)
 - **[services/web-ui-go/DEVELOPMENT_PLAN.md](services/web-ui-go/DEVELOPMENT_PLAN.md#-kritichno-unifikacija-logirovanija)**
   - Section: "🔴 КРИТИЧНО: Унификация логирования"
-  - Status: ✅ implementation + hardening done (`slog` + split logs + `request_id` + fail-fast + graceful shutdown + debug/release regression)
+  - Status: ✅ implementation + hardening done (`slog` + access/error/audit split + `request_id` + fail-fast + graceful shutdown + debug/release regression)
   - Runbook: [services/web-ui-go/LOGGING_RUNBOOK.md](services/web-ui-go/LOGGING_RUNBOOK.md)
   - Effort: 0-0.5 days
   - Impact: HIGH (observability hardening)

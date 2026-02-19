@@ -53,17 +53,19 @@ docker logs ct-system-cts-core-1 | head
 
 ### Current status (implemented)
 - ✅ `slog` logger in `services/web-ui-go/internal/logger/logger.go`
-- ✅ Split streams: `error.log` + `access.log`
+- ✅ Split streams: `error.log` + `access.log` + `audit.log`
 - ✅ Access middleware wired in `cmd/web/main.go`
+- ✅ Audit middleware wired in `cmd/web/main.go`
 - ✅ `request_id` middleware + `X-Request-ID` propagation (context/response/access/error)
 - ✅ Fail-fast on log directory write access
 - ✅ Graceful shutdown with `logger.Close()`
 
 ### Final checklist (what to finish)
 - [x] Validate `docker logs ct-system-web-ui-1` in debug and release modes
-- [x] Validate that both `access.log` and `error.log` are present in `/app/logs`
+- [x] Validate that `access.log`, `error.log` and `audit.log` are present in `/app/logs`
 - [x] Verify rotation files appear under load (`access.log.*`, `error.log.*`)
 - [x] Confirm key fields: `request_id`, `module`, `method`, `path`, `status`, `latency_ms`, `user_id`
+- [x] Confirm audit fields: `event_type`, `action`, `resource_type`, `result`, `user_login`
 - [x] Finalize short runbook for operational troubleshooting
 
 Runbook: `services/web-ui-go/LOGGING_RUNBOOK.md`
@@ -91,6 +93,12 @@ ls -lh /app/logs/
 - [ ] Logs are JSON format (valid JSON)
 - [ ] Files exist in /var/log/{service}/
 - [ ] Log rotation works (after some time/size)
+
+### Audit `request_id` rule
+
+- Request-bound audit events: `request_id` is REQUIRED
+- System/background audit events (cron/jobs/startup): `request_id` is OPTIONAL
+- For system/background events, use stable correlation keys (`job_id`, `task_id`, `event_id`)
 
 ### CTS-Core & Trader
 
