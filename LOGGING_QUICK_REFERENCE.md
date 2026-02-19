@@ -18,14 +18,13 @@
 
 ---
 
-## 🔧 CTS-Core: Logging Fix (PARTIAL)
+## 🔧 CTS-Core: Logging Fix (ALMOST DONE)
 
-CTS-Core переведен на JSON + stdout + lumberjack, логгеры/файлы разделены.
+CTS-Core переведен на JSON + stdout + lumberjack, логгеры/файлы разделены, request_id + access/out_request + ws/audit подключены (WS stub).
 
 **Осталось сделать:**
-- Подключить request_id middleware к HTTP серверу
-- Проброс request_id в access/error/out_request
-- Включить access/out_request/ws/audit логирование в обработчиках
+- Заменить WS stub на полноценный протокол
+- Добавить graceful shutdown (SIGTERM/SIGINT + Shutdown(ctx))
 
 ### Verify
 

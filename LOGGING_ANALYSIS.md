@@ -36,7 +36,7 @@
 
 ---
 
-### ⚠️ CTS-Core (частично готово)
+### ⚠️ CTS-Core (почти готово)
 
 **Файл:** `services/cts-core/internal/logger/logger.go`
 
@@ -72,8 +72,7 @@ Log = slog.New(slog.NewJSONHandler(writer, &slog.HandlerOptions{Level: logLevel,
 **Ротация:** lumberjack
 
 **Проблемы:**
-- ⚠️ Разделение логов реализовано на уровне логгеров/конфига, но нет middleware/handlers
-- ⚠️ request_id middleware добавлен, но нет проброса в access/error/out_request
+- ⚠️ WS обработчик пока stub (echo), нужен полноценный протокол
 - ❌ Нет полного graceful shutdown (SIGTERM/SIGINT + Shutdown(ctx)) как в HSM
 
 **Docker compatibility:** ✅ ХОРОШО
@@ -202,7 +201,7 @@ logger = NewLogger(multiWriter)
 |--------|-----------|--------|------|--------|-------------|--------|
 | **HSM** | slog (stdlib) | ✅ | ✅ | JSON | ✅ Работает | ✅ Эталон |
 | **Web UI** | external logger | ✅ | ✅ | Text | ✅ Работает | ⚠️ Унифицировать |
-| **CTS-Core** | slog (stdlib) | ✅ | ✅ | JSON | ✅ Работает | ⚠️ Частично |
+| **CTS-Core** | slog (stdlib) | ✅ | ✅ | JSON | ✅ Работает | ⚠️ Почти готово |
 | **Trader** | slog (stdlib) | ❌ | ❌ | Text | ❌ Permission denied | ❌ Критично |
 
 ---
@@ -292,11 +291,11 @@ trader-1:
 
 ### 2. CTS-Core: остаточные задачи
 
-**Статус:** JSON + stdout + lumberjack уже внедрены.
+**Статус:** JSON + stdout + lumberjack + request_id + access/out_request + ws/audit готовы (WS stub).
 
 **Осталось:**
-- Добавить request_id (X-Request-ID) и пробросить в логи.
-- Разделить access/error/out_request потоки.
+- Заменить WS stub на полноценный протокол.
+- Добавить graceful shutdown (SIGTERM/SIGINT + Shutdown(ctx)).
 
 ---
 
@@ -401,7 +400,7 @@ logging:
 ### Приоритет 1 (критично для Docker)
 
 1. ❌ **Trader-1** - КРИТИЧНО: Исправить permission denied + добавить stdout
-2. ⚠️ **CTS-Core** - Добавить request_id + split логов
+2. ⚠️ **CTS-Core** - Подключить ws/audit handlers + graceful shutdown
 3. ✅ **Web UI** - Уже работает, но можно унифицировать на JSON
 
 ### Приоритет 2 (унификация)
@@ -479,7 +478,7 @@ docker logs ct-system-cts-core --tail 10 | jq '.'
 
 3. **CTS-Core** - базовая унификация выполнена ✅
     - slog + JSON + stdout + lumberjack
-    - Осталось: request_id и split логов (access/out_request)
+    - Осталось: ws/audit обработчики и graceful shutdown
 
 4. **Trader** - критическая проблема ❌
    - Permission denied при записи в logs/
@@ -500,7 +499,7 @@ docker logs ct-system-cts-core --tail 10 | jq '.'
 |--------|------------|--------|----------|
 | **HSM** | ✅ Работают | ✅ Отлично | Нет, это эталон |
 | **Web UI** | ✅ Работают | ✅ Хорошо | Опционально: JSON вместо text |
-| **CTS-Core** | ✅ Работают | ⚠️ Частично | request_id + split логов |
+| **CTS-Core** | ✅ Работают | ⚠️ Почти готово | ws/audit + graceful shutdown |
 | **Trader-1** | ❌ Permission denied | ❌ Критично | 1) Исправить права<br>2) Добавить stdout |
 
 **Общая оценка:** 3/4 сервисов работают корректно с Docker логированием.
@@ -508,7 +507,7 @@ docker logs ct-system-cts-core --tail 10 | jq '.'
 **Приоритет действий:**
 1. 🔴 Trader: Исправить permission denied (chmod 777 logs/)
 2. 🔴 Trader: Добавить stdout + JSON + lumberjack
-3. 🟡 CTS-Core: request_id + access/out_request split
+3. 🟡 CTS-Core: WS protocol + graceful shutdown
 4. 🟢 Web UI: Опционально сменить text на json
 5. 🟢 Все: Унифицировать на slog stdlib
 

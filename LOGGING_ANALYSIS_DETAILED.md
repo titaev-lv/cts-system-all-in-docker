@@ -9,11 +9,11 @@
 | **Ротация** | `lumberjack` ✅ | `lumberjack` ✅ | Кастомный | `lumberjack` ✅ |
 | **MultiWriter** | Да (stdout+file) | Да (stdout+file) | Да (file) | Да (stdout+file) |
 | **Модульность** | ✅ module tags | ✅ module tag (Get("module")) | ✅ module tag (Get("module")) | Нет ❌ |
-| **Access Log** | access.log | access.log + ws_access.log (configured) | - | ❌ Не разделены |
-| **Error Log** | error.log + audit.log | error.log + audit.log (configured) | - | ❌ Не разделены |
+| **Access Log** | access.log | access.log + ws_access.log (wired) | - | ❌ Не разделены |
+| **Error Log** | error.log + audit.log | error.log + audit.log (wired) | - | ❌ Не разделены |
 | **Проверка прав** | ✅ Fail-fast | ✅ Fail-fast | ✅ MkdirAll | ✅ MkdirAll |
 | **Graceful shutdown** | ✅ SIGTERM/SIGINT + Shutdown(ctx) + Close | ⚠️ Только Close | ⚠️ Только Close | ❌ Нет |
-| **Защита от паник** | ✅ Recovery middleware | ❌ Нет | Кастомный plain handler | legacy logger default |
+| **Защита от паник** | ✅ Recovery middleware | ✅ Recovery middleware | Кастомный plain handler | legacy logger default |
 
 ---
 
@@ -57,10 +57,12 @@ accessLogger := slog.New(slog.NewJSONHandler(accessWriter, opts))
 - ✅ Fail-fast проверка доступности директории логов (write/rename)
 - ✅ Модульное логирование: Get("main"), Get("database"), Get("hsm")
 - ✅ Graceful shutdown (частично): `defer logger.Close()`
+- ✅ Разделение логов реализовано на уровне логгеров/конфига и подключено через REST middleware
+- ✅ request_id проброшен в access/error и out_request (через context)
+- ✅ Recovery middleware (panic → error.log)
 
 **Минусы:**
-- ⚠️ Разделение логов реализовано на уровне логгеров/конфига, но нет middleware/handlers
-- ⚠️ request_id middleware добавлен, но нет проброса в access/error/out_request
+- ⚠️ WS обработчик пока stub (echo), нужен полноценный протокол
 - ❌ Нет обработки SIGTERM/SIGINT и Shutdown(ctx) как в HSM (нужно унифицировать)
 
 **Initialization код (обновлено):**

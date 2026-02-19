@@ -75,7 +75,7 @@
 
 ### Требуемые изменения по сервисам
 
-#### CTS-Core (1 день)
+#### CTS-Core
 ```
 Priority: HIGH
 Impact: docker logs видны (DONE)
@@ -87,8 +87,9 @@ Effort: 1-2 дня
 
 [x] Добавить request_id middleware (X-Request-ID)
 [x] Разделить loggers/files для error/access/out_request/ws_access/ws_out/audit
-[ ] Проброс request_id в access/error/out_request
-[ ] Подключить access/out_request/ws/audit логирование в обработчиках
+[x] Проброс request_id в access/error/out_request
+[x] Подключить access/out_request логирование в обработчиках
+[x] Подключить ws/audit логирование в обработчиках (WS stub)
     
 [ ] Тестирование:
     - docker-compose up cts-core-1
