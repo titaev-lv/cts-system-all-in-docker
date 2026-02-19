@@ -73,7 +73,6 @@ Log = slog.New(slog.NewJSONHandler(writer, &slog.HandlerOptions{Level: logLevel,
 
 **Проблемы:**
 - ⚠️ WS обработчик пока stub (echo), нужен полноценный протокол
-- ❌ Нет полного graceful shutdown (SIGTERM/SIGINT + Shutdown(ctx)) как в HSM
 
 **Docker compatibility:** ✅ ХОРОШО
 
@@ -291,11 +290,10 @@ trader-1:
 
 ### 2. CTS-Core: остаточные задачи
 
-**Статус:** JSON + stdout + lumberjack + request_id + access/out_request + ws/audit готовы (WS stub).
+**Статус:** JSON + stdout + lumberjack + request_id + access/out_request + ws/audit + graceful shutdown готовы (WS stub).
 
 **Осталось:**
 - Заменить WS stub на полноценный протокол.
-- Добавить graceful shutdown (SIGTERM/SIGINT + Shutdown(ctx)).
 
 ---
 
@@ -400,7 +398,7 @@ logging:
 ### Приоритет 1 (критично для Docker)
 
 1. ❌ **Trader-1** - КРИТИЧНО: Исправить permission denied + добавить stdout
-2. ⚠️ **CTS-Core** - Подключить ws/audit handlers + graceful shutdown
+2. ⚠️ **CTS-Core** - Заменить WS stub на полноценный протокол
 3. ✅ **Web UI** - Уже работает, но можно унифицировать на JSON
 
 ### Приоритет 2 (унификация)
@@ -478,7 +476,7 @@ docker logs ct-system-cts-core --tail 10 | jq '.'
 
 3. **CTS-Core** - базовая унификация выполнена ✅
     - slog + JSON + stdout + lumberjack
-    - Осталось: ws/audit обработчики и graceful shutdown
+    - Осталось: WS протокол (stub → production)
 
 4. **Trader** - критическая проблема ❌
    - Permission denied при записи в logs/
@@ -499,7 +497,7 @@ docker logs ct-system-cts-core --tail 10 | jq '.'
 |--------|------------|--------|----------|
 | **HSM** | ✅ Работают | ✅ Отлично | Нет, это эталон |
 | **Web UI** | ✅ Работают | ✅ Хорошо | Опционально: JSON вместо text |
-| **CTS-Core** | ✅ Работают | ⚠️ Почти готово | ws/audit + graceful shutdown |
+| **CTS-Core** | ✅ Работают | ⚠️ Почти готово | WS протокол |
 | **Trader-1** | ❌ Permission denied | ❌ Критично | 1) Исправить права<br>2) Добавить stdout |
 
 **Общая оценка:** 3/4 сервисов работают корректно с Docker логированием.
@@ -507,7 +505,7 @@ docker logs ct-system-cts-core --tail 10 | jq '.'
 **Приоритет действий:**
 1. 🔴 Trader: Исправить permission denied (chmod 777 logs/)
 2. 🔴 Trader: Добавить stdout + JSON + lumberjack
-3. 🟡 CTS-Core: WS protocol + graceful shutdown
+3. 🟡 CTS-Core: WS protocol
 4. 🟢 Web UI: Опционально сменить text на json
 5. 🟢 Все: Унифицировать на slog stdlib
 

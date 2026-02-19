@@ -367,7 +367,7 @@ error.log.3.gz
 ```
 [ ] Реализовать StateManager (load/save daemon.state)
 [ ] Исправить deadlock в main.go
-[ ] Добавить graceful shutdown (SIGTERM, SIGINT)
+[x] Добавить graceful shutdown (SIGTERM, SIGINT)
 [ ] State format: JSON с версионированием
 [ ] Atomic writes (write → rename)
 [ ] Tests: state save/load/recovery

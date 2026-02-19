@@ -20,11 +20,10 @@
 
 ## 🔧 CTS-Core: Logging Fix (ALMOST DONE)
 
-CTS-Core переведен на JSON + stdout + lumberjack, логгеры/файлы разделены, request_id + access/out_request + ws/audit подключены (WS stub).
+CTS-Core переведен на JSON + stdout + lumberjack, логгеры/файлы разделены, request_id + access/out_request + ws/audit + graceful shutdown подключены (WS stub).
 
 **Осталось сделать:**
 - Заменить WS stub на полноценный протокол
-- Добавить graceful shutdown (SIGTERM/SIGINT + Shutdown(ctx))
 
 ### Verify
 

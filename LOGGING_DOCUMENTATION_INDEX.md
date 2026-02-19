@@ -50,7 +50,7 @@
 #### CTS-Core
 - **[services/cts-core/DEVELOPMENT_PLAN.md](services/cts-core/DEVELOPMENT_PLAN.md#3-unifikacija-logirovanija)**
   - Section: "3. 📊 Унификация логирования"
-  - Changes needed: WS protocol + graceful shutdown
+  - Changes needed: WS protocol
   - Effort: 1-2 days
   - Impact: MEDIUM (observability improvements)
 
@@ -98,7 +98,7 @@
 
 **Quick path:**
 ```
-CTS-Core fix:    1-2 days    (WS protocol + graceful shutdown)
+CTS-Core fix:    1-2 days    (WS protocol)
 Trader fix:      30 minutes  (identical to CTS-Core)
 Web UI fix:      2-3 days    (migration + features)
 Testing:         1 day       (validation + docker logs checks)
@@ -176,7 +176,7 @@ docker logs ct-system-web-ui-1 | jq . | head
 ## 🎯 Implementation Priority
 
 ### Priority 1: Critical (2-3 days)
-- [ ] CTS-Core: WS protocol + graceful shutdown
+- [ ] CTS-Core: WS protocol
 - [ ] Trader: Add stdout + JSON (blocks docker logs debugging)
 - [ ] Web UI: Migrate legacy logger → slog (external dependency removal)
 
