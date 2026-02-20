@@ -18,7 +18,7 @@
 - **MySQL** - общая база данных
 - **HSM Service** - служба управления ключами и шифрования (production-ready)
 - **CTS-Core** - центральный оркестратор (Phase 1.3 complete, 1.4 in progress)
-- **Trader Daemon** - торговые демоны (Phase 1 complete, Phase 2 planned)
+- **Trader** - торговые сервисы (Phase 1 complete, Phase 2 planned)
 - **Web UI** - административная панель (operational)
 
 ## Предварительные требования
@@ -93,7 +93,7 @@ chmod +x init-system.sh
 - ✅ Генерацию PKI инфраструктуры (Root CA + Intermediate CA)
 - ✅ Генерацию 4 серверных и 16 клиентских сертификатов
 - ✅ Проверку/клонирование сервисов из GitHub
-- ✅ Инициализацию конфигурационных файлов (.env, config.yaml, config.ini)
+- ✅ Инициализацию конфигурационных файлов (.env, config.yaml)
 - ✅ Запуск только доступных сервисов (MySQL + клонированные)
 - ✅ Создание базы данных `cts-system` в MySQL
 - ✅ Загрузку начальных данных из `volumes/mysql-dump/init.sql` (если файл существует)
@@ -164,7 +164,7 @@ ct-system/
 ├── services/                # Все сервисы
 │   ├── cts-core/           # CTS-Core сервис (git repo)
 │   ├── hsm-service/        # HSM сервис (git repo)
-│   ├── trader-daemon/      # Trader daemon (git repo)
+│   ├── trader/             # Trader service (git repo)
 │   └── mysql/              # MySQL конфиги
 │
 └── volumes/                # Docker volumes (не в git)
@@ -249,7 +249,7 @@ TZ=Europe/Moscow
 
 - **CTS-Core**: [services/cts-core/conf/config.yaml](services/cts-core/conf/config.yaml)
 - **HSM**: [services/hsm-service/config.yaml](services/hsm-service/config.yaml)
-- **Trader**: [services/trader-daemon/conf/config.ini](services/trader-daemon/conf/config.ini)
+- **Trader**: [services/trader/conf/config.yaml](services/trader/conf/config.yaml)
 
 ## 🧪 Тестирование
 
@@ -407,11 +407,11 @@ code ct-system.code-workspace
 Workspace включает:
 - 🎛️ CTS-Core
 - 🔐 HSM Service
-- 🤖 Trader Daemon
+- 🤖 Trader
 
 ##  Примечания
 
-- **Traders закомментированы**: До реализации WebSocket в Phase 2
+- **Trader работает в outbound-only режиме**: задачи и оркестрация через CTS-Core
 - **Volumes не в git**: `volumes/` исключены из версионирования
 - **Логи каждого сервиса**: В своих директориях `services/*/logs/`
 - **Dev окружение**: Это development среда, не для production

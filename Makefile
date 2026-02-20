@@ -29,7 +29,7 @@ logs-web-ui:
 	docker compose logs -f web-ui
 
 logs-trader-1:
-	tail -n 100 -f services/trader-daemon/logs/error.log
+	tail -n 100 -f services/trader/logs/error.log
 
 logs-trader-2:
 	docker compose logs -f trader-1

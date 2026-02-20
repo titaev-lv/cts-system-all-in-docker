@@ -32,7 +32,7 @@
 - ⏳ Phase 3: Task scheduler + Load balancing
 - ⏳ Phase 4: Full integration + Trade results
 
-**Trader Daemon:**
+**Trader:**
 - ✅ Phase 1: Фундамент (структура, типы, базовая инфраструктура)
 - ⏳ Phase 2: WebSocket client к CTS-Core
 - ⏳ Phase 3: Order book + Pub/Sub
@@ -66,10 +66,10 @@
 |--------|-----------|--------|--------|------|---------|------------|
 | HSM | ✅ slog | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
 | CTS-Core | ✅ slog | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
-| Trader | ✅ slog | ❌ Text | ❌ | ✅ | ❌ Custom | ❌ Нет логов |
+| Trader | ✅ slog | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
 | Web UI | ✅ slog | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
 
-**Основной дефект:** `docker logs ct-system-trader-daemon-1` **НЕ показывает логи**, потому что логирующие потоки идут только в файл и нет прав на запись.
+**Статус Trader:** `docker logs ct-system-trader-1` показывает структурированные JSON логи.
 
 **Детальный анализ:** [LOGGING.md](LOGGING.md) (актуальный единый summary + чек-листы)
 
@@ -91,7 +91,7 @@ Effort: 1-2 дня
 [x] Подключить access/out_request логирование в обработчиках
 [x] Подключить ws/audit логирование в обработчиках (WS stub)
     
-[ ] Тестирование:
+[x] Тестирование:
     - docker-compose up cts-core-1
     - docker logs ct-system-cts-core-1 | head -20
     - Expected: JSON strings with module, level, etc.
@@ -105,19 +105,19 @@ Effort: 1-2 дня
 
 ---
 
-#### Trader Daemon (1 день)
+#### Trader (1 день)
 ```
 Priority: HIGH
 Impact: docker logs станут видны
 Effort: 1 day (identical changes to CTS-Core)
 
-[ ] Same as CTS-Core:
+[x] Same as CTS-Core:
     - os.Stdout in MultiWriter
     - JSON format (slog.NewJSONHandler)
     - Replace rotatedFile with lumberjack
 
-[ ] File to modify:
-    - services/trader-daemon/internal/logger/logger.go
+[x] File to modify:
+    - services/trader/internal/logger/logger.go
     
 [ ] Difference from CTS-Core:
     - Trader has Trade logger module (use same pattern)
@@ -125,7 +125,7 @@ Effort: 1 day (identical changes to CTS-Core)
 ```
 
 **Files to modify:**
-- [services/trader-daemon/internal/logger/logger.go](services/trader-daemon/internal/logger/logger.go)
+- [services/trader/internal/logger/logger.go](services/trader/internal/logger/logger.go)
 
 ---
 
@@ -146,7 +146,7 @@ Impact: Unified with other services + new access log analytics
     [x] module tags + user_id in access log
     [x] lumberjack rotation (separate policies)
 
-[ ] PHASE 3: Final hardening (1 day)
+[x] PHASE 3: Final hardening (1 day)
     [x] add `request_id` middleware (`X-Request-ID`)
     [x] propagate `request_id` to access + error logs and response header
     [x] docker debug/release regression checks
@@ -217,8 +217,12 @@ Priority: LOW (improvements only, not blocking)
 /var/log/cts-core/
   └── error.log*          # All logs (JSON format)
 
-/var/log/trader-daemon/
-  └── daemon.log*         # All logs (JSON format)
+/var/log/trader/
+    ├── error.log*          # System/error logs (JSON)
+    ├── out_request.log*    # Outbound request logs (JSON)
+    ├── ws_in.log*          # Inbound WS logs (JSON)
+    ├── ws_out.log*         # Outbound WS logs (JSON)
+    └── audit.log*          # Audit logs (JSON)
 
 /var/log/web-ui-go/
   ├── access.log*         # HTTP requests only (JSON, 50MB limit)
@@ -259,7 +263,7 @@ error.log.3.gz
 **Файлы:**
 - `/home/dev/docker/ct-system/LOGGING.md` (единый документ по логированию)
 - `services/cts-core/internal/logger/logger.go`
-- `services/trader-daemon/internal/logger/logger.go`
+- `services/trader/internal/logger/logger.go`
 - `services/web-ui-go/internal/logger/logger.go` (с access/error разделением)
 - `services/web-ui-go/internal/middleware/request_logging.go` (новый файл для HTTP логирования)
 
@@ -273,21 +277,21 @@ error.log.3.gz
 |--------|--------|--------------|------------|
 | HSM | YAML | ✅ | ✅ |
 | CTS-Core | YAML | ✅ | ✅ |
-| Trader | INI | ❌ | ⚠️ |
+| Trader | YAML | ✅ | ✅ |
 | Web UI | YAML | ✅ | ✅ |
 
 **Проблема:**
-- Trader использует INI (отличается от остальных)
-- Inconsistent ENV variable support
+- Trader использует YAML (выровнен со стандартом остальных сервисов)
+- Требуется удерживать единый ENV override pattern между сервисами
 
 **Решение:**
-- Trader: мигрировать на YAML (как CTS-Core и HSM)
+- Trader: поддерживать единый YAML + ENV override подход (как CTS-Core и HSM)
 - Стандартизировать ENV override pattern
 
 **Задачи:**
 ```
-[ ] Trader: config.ini → config.yaml
-[ ] Trader: Добавить поддержку ENV variables (${VAR:-default})
+[x] Trader: config.yaml используется как основной формат
+[x] Trader: Добавить поддержку ENV variables (актуальные runtime секции)
 [ ] Проверить: все сервисы читают ENV из docker-compose.yml
 [ ] Документация: Обновить README.md с примерами конфигов
 ```
@@ -468,7 +472,7 @@ error.log.3.gz
 
 ---
 
-### Priority 4: Trader Daemon Phase 2 (5-7 дней) 🟢
+### Priority 4: Trader Phase 2 (5-7 дней) 🟢
 
 #### 4.1. WebSocket Client к CTS-Core (2 дня)
 
@@ -584,10 +588,10 @@ error.log.3.gz
 
 **Задачи:**
 ```
-[ ] Regression tests: debug/release logging profiles
-[ ] Проверить ротацию под нагрузкой
-[ ] Финализировать runbook (операционные инциденты)
-[ ] Синхронизировать корневые logging документы
+[x] Regression tests: debug/release logging profiles
+[x] Проверить ротацию под нагрузкой
+[x] Финализировать runbook (операционные инциденты)
+[x] Синхронизировать корневые logging документы
 ```
 
 **Приоритет:** LOW (работает, но для единообразия желательно)
@@ -659,8 +663,8 @@ gantt
 ## 🎯 Success Criteria
 
 ### Week 1 (Стандартизация)
-- [ ] Все сервисы: логи видны в `docker logs`
-- [ ] Единый формат: JSON (slog)
+- [x] Все сервисы: логи видны в `docker logs`
+- [x] Единый формат: JSON (slog)
 - [ ] Единая конфигурация: YAML + ENV
 - [ ] Все healthchecks работают
 - [ ] Документация обновлена
@@ -703,7 +707,7 @@ gantt
     │   ├── API_SPECIFICATION.md # CTS-Core API
     │   └── guides/              # Phase-by-phase guides
     │
-    ├── trader-daemon/
+    ├── trader/
     │   ├── DEVELOPMENT_PLAN.md  # Trader детальный план
     │   └── ...
     │
@@ -749,12 +753,12 @@ make up
 ### Code Review Checklist
 
 ```
-[ ] Logging: используется slog + JSON + stdout
+[x] Logging: используется slog + JSON + stdout
 [ ] Config: YAML с ENV override
 [ ] Tests: unit + integration
 [ ] Errors: wrapped с context
 [ ] Healthcheck: работает
-[ ] Docker logs: логи видны
+[x] Docker logs: логи видны
 [ ] Documentation: обновлена
 ```
 
@@ -802,7 +806,7 @@ make up
 
 **Вопросы для обсуждения:**
 - Web UI: нужна ли отдельная структура полей для SIEM/ELK?
-- Trader config: INI → YAML приоритет?
+- Trader config: YAML миграция завершена, следующий шаг — env override pattern
 - CI/CD: какой pipeline предпочтительнее? (GitHub Actions, GitLab CI, Jenkins)
 
 ---

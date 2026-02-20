@@ -13,7 +13,7 @@
 |---|---|---|---|---|---|---|---|
 | HSM | `log/slog` | JSON | `error` + `access` + `audit` | ✅ | ✅ `lumberjack` | ✅ | ✅ Reference |
 | CTS-Core | `log/slog` | JSON | `error` + `access` + `out_request` + `ws_*` + `audit` | ✅ | ✅ `lumberjack` | ✅ | ⚠️ WS protocol hardening |
-| Trader | `log/slog` | Mixed/legacy in flow | partially split | ⚠️ | ⚠️ | ⚠️ | ❗ Priority migration |
+| Trader | `log/slog` | JSON | `error` + `out_request` + `ws_in` + `ws_out` + `audit` | ✅ | ✅ `lumberjack` | ✅ (outbound) | ✅ Runtime validated |
 | Web-UI Go | `log/slog` | JSON/Text | `error` + `access` + `audit` | ✅ | ✅ `lumberjack` | ✅ | ✅ Implemented + hardened |
 
 ### What is already closed for Web-UI
@@ -85,14 +85,17 @@ CTS-Core orchestrates critical control-plane operations (traders, config, assign
 
 ## Trader
 
-### Current risk profile
-- Logging not fully aligned to unified standard
-- Operational pain persists in container observability path
+### Current status
+- Unified streams implemented in code: `error.log`, `out_request.log`, `ws_in.log`, `ws_out.log`, `audit.log`
+- `stdout + file` enabled for all streams
+- JSON handlers + `lumberjack` rotation enabled
+- Trader switched to outbound-only transport model (no inbound HTTP API)
+- Correlation moved to outbound request semantics (`request_id`/`event_id`), including WS mapping `ws_out.event_id -> ws_in.request_id`
 
-### Priority work
-- Ensure stable `stdout + file`
-- Normalize JSON format path
-- Complete split and safe rotation patterns
+### Runtime validation result
+- Compose runtime validation completed (startup logs in `docker logs`, file streams active)
+- Trader recreated from latest image and startup markers confirmed (`INIT START trader`)
+- Integration smoke checks synchronized with root testing strategy
 
 ---
 
@@ -129,29 +132,29 @@ Web-UI executes admin/control actions (auth + CRUD/mutating endpoints). Access l
 ## 4) Verification Checklist (Detailed)
 
 ### A. Core health
-- [ ] Service starts without logger init fallback
-- [ ] No permission-denied on log paths
-- [ ] `docker logs <service>` non-empty
+- [x] Service starts without logger init fallback
+- [x] No permission-denied on log paths
+- [x] `docker logs <service>` non-empty
 
 ### B. Format and fields
-- [ ] JSON parseable output
-- [ ] Required core fields exist (`time`, `level`, `msg`)
-- [ ] `module` field present
-- [ ] `request_id` present for request-bound events
+- [x] JSON parseable output
+- [x] Required core fields exist (`time`, `level`, `msg`)
+- [x] `module` field present
+- [x] `request_id` present for request-bound events
 
 ### C. Stream split
-- [ ] `error.log` exists
-- [ ] `access.log` exists
-- [ ] `audit.log` exists (where applicable)
+- [x] `error.log` exists
+- [x] `access.log` exists
+- [x] `audit.log` exists (where applicable)
 
 ### D. Rotation
-- [ ] Rotated files appear under load
-- [ ] Compression artifacts (`.gz`) appear as configured
+- [x] Rotated files appear under load
+- [x] Compression artifacts (`.gz`) appear as configured
 
 ### E. Security and audit semantics
-- [ ] Mutating/admin actions are audited
-- [ ] Audit carries actor/correlation metadata
-- [ ] Non-request events use stable correlation IDs when request_id absent
+- [x] Mutating/admin actions are audited
+- [x] Audit carries actor/correlation metadata
+- [x] Non-request events use stable correlation IDs when request_id absent
 
 ---
 
@@ -178,8 +181,8 @@ docker logs --since 2m ct-system-cts-core | tail -n 80
 
 ## 6) Priority Queue (Now)
 
-1. Trader: finish migration to unified JSON + stdout + rotation path
-2. CTS-Core: WS protocol hardening completion
+1. Logging unification topic: closed
+2. CTS-Core WS protocol hardening remains as protocol/functional work (not logging baseline)
 3. Keep Web-UI audit/access/error schema stable and compatible with future centralized ingestion
 
 ---

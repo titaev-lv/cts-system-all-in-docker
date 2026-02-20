@@ -29,7 +29,7 @@
 | HSM | ✅ Да | ✅ Да (может работать изолированно) | ✅ Да |
 | Web-UI | ✅ Да | ✅ Да (требует MySQL) | ✅ Да |
 | CTS-Core | ✅ Да | ✅ Да (требует MySQL + HSM) | ✅ Да |
-| Trader | ✅ Да | ⚠️ Ограничено (зависит от DB/CTS-Core, container path пока требует донастройки) | ✅ Да |
+| Trader | ✅ Да | ✅ Да (требует CTS-Core; без прямой DB зависимости) | ✅ Да |
 
 ---
 
@@ -59,10 +59,12 @@
   - access/error/audit logs
 
 ### Trader
-- Минимум: обычно DB + оркестратор/внешние интеграции.
-- Текущее ограничение в репозитории CT-SYSTEM:
-  - сервисные блоки trader в root compose закомментированы
-  - требуется синхронизация контейнерной конфигурации trader для стабильного integration запуска
+- Минимум: `cts-core` (+ внешние интеграции по сценарию).
+- Почему: Trader работает как outbound-клиент к CTS-Core и биржам, без прямого MySQL в runtime.
+- Проверки:
+  - запуск контейнера
+  - стабильный старт без DB dial path
+  - JSON логи в `docker logs`
 
 ---
 
@@ -182,7 +184,7 @@ make logs
 1. Добавить `make test-web-ui`, `make test-cts-core`, `make test-hsm`, `make test-trader` (service-local)
 2. Добавить `make test-int-web-ui`, `make test-int-cts-core` (minimal integration)
 3. Вынести smoke-check scripts в `scripts/testing/`
-4. Для trader: завершить container wiring в root compose (если нужен integration в CT-SYSTEM)
+4. Для trader: поддерживать актуальный integration wiring в root compose
 
 ---
 

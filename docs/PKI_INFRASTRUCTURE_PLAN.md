@@ -19,7 +19,7 @@
 1. Установку проектов из GitHub (`init-system.sh`)
 2. Генерацию dev CA и всех необходимых сертификатов
 3. Правильное монтирование PKI в docker-compose
-4. Поддержку 3 экземпляров trader-daemon
+4. Поддержку 3 экземпляров trader
 
 ---
 
@@ -178,7 +178,7 @@ volumes/pki/
 2. Клонирование GitHub репозиториев:
    - git clone <hsm-service-url> services/hsm-service
    - git clone <cts-core-url> services/cts-core
-   - git clone <trader-daemon-url> services/trader-daemon
+  - git clone <trader-url> services/trader
    - git clone <web-ui-go-url> services/web-ui-go
 3. Копирование .env.example → .env
 4. Генерация PKI инфраструктуры:

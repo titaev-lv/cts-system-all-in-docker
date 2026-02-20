@@ -155,31 +155,38 @@ services:
     restart: unless-stopped
 
   # 5. Trader-1 (test)
-#  trader-1:
-#    build:
-#      context: ./services/trader
-#      dockerfile: Dockerfile
-#    container_name: ct-system-trader-1
-#    user: "${TRADER_UID:-1001}:${TRADER_GID:-1001}"
-#    depends_on:
-#      mysql:
-#        condition: service_healthy
-#    volumes:
-#      - ./services/trader/conf:/app/conf:ro
-#      - ./services/trader/logs:/app/logs
-#      - ./services/trader/state:/app/state
-#    environment:
-#      - TZ=${TZ:-UTC}
-#    ports:
-#      - "8082:8080"
-#    networks:
-#      - cts-net
-#    deploy:
-#      resources:
-#        limits:
-#          cpus: '2'
-#          memory: 1G
-#    restart: unless-stopped
+  trader-1:
+    build:
+      context: ./services/trader
+      dockerfile: Dockerfile
+    container_name: ct-system-trader-1
+    user: "${TRADER_UID:-1001}:${TRADER_GID:-1001}"
+    depends_on:
+      cts-core:
+        condition: service_healthy
+    volumes:
+      - ./services/trader/conf:/app/conf:ro
+      - ./services/trader/logs:/app/logs
+      - ./services/trader/state:/app/state
+    command: ["-c", "conf/config.yaml"]
+    environment:
+      - TZ=${TZ:-UTC}
+      - TRADER_ORDERBOOK_DEBUG_LOG_RAW=false
+      - TRADER_ORDERBOOK_DEBUG_LOG_MSG=false
+      - TRADER_CLICKHOUSE_HOST=clickhouse
+      - TRADER_CLICKHOUSE_PORT=8123
+      - TRADER_CLICKHOUSE_DATABASE=crypto
+      - TRADER_CLICKHOUSE_USERNAME=default
+      - TRADER_CLICKHOUSE_PASSWORD=default
+      - TRADER_CLICKHOUSE_USE_TLS=false
+    networks:
+      - cts-net
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+    restart: unless-stopped
 
   # trader-2:
   #   build:
