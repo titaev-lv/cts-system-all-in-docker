@@ -257,7 +257,7 @@ error.log.3.gz
 - Web UI: разделенные логи (access.log + error.log) для аналитики и отладки
 
 **Файлы:**
-- `/home/dev/docker/ct-system/LOGGING_QUICK_REFERENCE.md` (единый документ по логированию)
+- `/home/dev/docker/ct-system/LOGGING.md` (единый документ по логированию)
 - `services/cts-core/internal/logger/logger.go`
 - `services/trader-daemon/internal/logger/logger.go`
 - `services/web-ui-go/internal/logger/logger.go` (с access/error разделением)
@@ -691,7 +691,7 @@ gantt
 /home/dev/docker/ct-system/
 ├── DEVELOPMENT_PLAN.md          # ← Этот файл (общий план)
 ├── ARCHITECTURE.md              # Общая архитектура системы
-├── LOGGING_QUICK_REFERENCE.md   # Единый документ по логированию
+├── LOGGING.md                   # Единый документ по логированию
 ├── HSM_ROTATION.md              # HSM key rotation (готово)
 ├── README.md                    # Quick start
 ├── docker-compose.yml           # Оркестрация

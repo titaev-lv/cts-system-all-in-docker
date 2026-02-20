@@ -7,6 +7,7 @@
 - **[DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)** - Общий план разработки (начните отсюда!)
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - Архитектура системы
 - **[LOGGING.md](LOGGING.md)** - Единый документ по логированию (Priority 1)
+- **[TESTING.md](TESTING.md)** - Тестовая стратегия (service-local / integration / E2E)
 - **[HSM_ROTATION.md](HSM_ROTATION.md)** - HSM key rotation (готово)
 - **services/\*/DEVELOPMENT_PLAN.md** - Детальные планы сервисов
 
@@ -349,6 +350,7 @@ sudo lsof -i :8080
 - [CTS-Core Development Plan](services/cts-core/DEVELOPMENT_PLAN.md)
 - [HSM Service API](services/hsm-service/API.md)
 - [HSM Architecture](services/hsm-service/ARCHITECTURE.md)
+- [Testing Strategy](TESTING.md) - Матрица и уровни тестирования CT-SYSTEM
 
 ## 🔄 Git Strategy
 
