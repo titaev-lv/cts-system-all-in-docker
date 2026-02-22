@@ -289,7 +289,7 @@ if [ $SKIP_PKI -eq 0 ]; then
     print_header "Step 3: Generating PKI Infrastructure"
     
     print_info "Generating certificates for mTLS communication"
-    print_info "This includes: 1 CA + 4 server + 16 client certificates"
+    print_info "This includes: 1 CA + 5 server + 16 client certificates"
     echo ""
     
     # Check if PKI scripts exist

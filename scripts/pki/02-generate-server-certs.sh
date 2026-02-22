@@ -3,7 +3,7 @@
 # Generate Server Certificates for CT-System Services
 #
 # This script generates server certificates for all services that accept
-# incoming connections: MySQL, ClickHouse, HSM Service, and CTS-Core.
+# incoming connections: MySQL, ClickHouse, HSM Service, CTS-Core, and Web UI.
 #
 # Usage: ./02-generate-server-certs.sh [--force]
 #        --force: Regenerate certificates even if they already exist
@@ -38,6 +38,7 @@ declare -a SERVERS=(
     "clickhouse|clickhouse|clickhouse,ct-system-clickhouse,localhost|127.0.0.1|clickhouse/server"
     "hsm-service|hsm-service|hsm,hsm-service,ct-system-hsm,localhost|127.0.0.1|hsm-service/server"
     "cts-core|cts-core|cts-core,ct-system-cts-core,localhost|127.0.0.1|cts-core/server"
+    "web-ui|web-ui|web-ui,ct-system-web-ui,localhost|127.0.0.1|web-ui/server"
 )
 
 # Function to generate server certificate
@@ -52,6 +53,7 @@ generate_server_cert() {
     local key_file="$full_output_dir/${service_name}.key"
     local csr_file="$full_output_dir/${service_name}.csr"
     local cert_file="$full_output_dir/${service_name}.crt"
+    local fullchain_file="$full_output_dir/${service_name}.fullchain.crt"
     local ext_file="$full_output_dir/${service_name}.ext"
     
     # Check if certificate already exists
@@ -92,6 +94,10 @@ generate_server_cert() {
     
     # Verify certificate
     verify_certificate "$cert_file"
+
+    # Build full chain certificate for TLS servers (leaf + intermediate)
+    cat "$cert_file" "$CA_DIR/intermediate-ca.crt" > "$fullchain_file"
+    chmod 644 "$fullchain_file"
     
     # Show certificate info
     show_certificate_info "$cert_file"
@@ -101,6 +107,7 @@ generate_server_cert() {
     
     print_success "Server certificate for $service_name completed!"
     print_info "Certificate: $cert_file"
+    print_info "Full chain:  $fullchain_file"
     print_info "Private key: $key_file"
     echo ""
 }
@@ -125,6 +132,8 @@ echo "  1. MySQL:       $PKI_ROOT/mysql/server/mysql.{key,crt}"
 echo "  2. ClickHouse:  $PKI_ROOT/clickhouse/server/clickhouse.{key,crt}"
 echo "  3. HSM Service: $PKI_ROOT/hsm-service/server/hsm-service.{key,crt}"
 echo "  4. CTS-Core:    $PKI_ROOT/cts-core/server/cts-core.{key,crt}"
+echo "  5. Web UI:      $PKI_ROOT/web-ui/server/web-ui.{key,crt}"
+echo "     Fullchain:   <service>.fullchain.crt (leaf + intermediate)"
 echo ""
 
 print_info "Next steps:"
