@@ -83,6 +83,8 @@ services:
     volumes:
       - ./services/web-ui-go/config/config.yaml:/app/config/config.yaml:ro
       - ./volumes/pki/ca/ca.crt:/app/pki/ca/ca.crt:ro
+      - ./volumes/pki/web-ui/server/web-ui.fullchain.crt:/app/pki/server/web-ui.fullchain.crt:ro
+      - ./volumes/pki/web-ui/server/web-ui.key:/app/pki/server/web-ui.key:ro
       - ./volumes/pki/mysql/clients/web-ui/web-ui-mysql.crt:/app/pki/mysql/web-ui-mysql.crt:ro
       - ./volumes/pki/mysql/clients/web-ui/web-ui-mysql.key:/app/pki/mysql/web-ui-mysql.key:ro
       - ./services/web-ui-go/logs:/app/logs
@@ -94,6 +96,7 @@ services:
       #- CT_DATABASE_MYSQL_DATABASE=${MYSQL_DATABASE:-ct_system}
     ports:
       - "80:80"
+      - "443:8443"
     networks:
       - cts-net
     healthcheck:
