@@ -223,6 +223,10 @@ rate_limit:
 - **Direct mode**: клиент → `web-ui-go`.
 - **Proxy mode**: клиент → `nginx` (TLS + HTTP/2 + static) → `web-ui-go`.
 
+Deployment note:
+- **Dev (Docker)**: `nginx` отдельным контейнером рядом с `web-ui-go`.
+- **Prod (Debian VM)**: `nginx + web-ui-go` на одной VM, отдельными процессами/сервисами.
+
 ### 10.1 Новая секция config для `web-ui-go`
 
 Целевая схема:
@@ -249,6 +253,8 @@ TODO:
   - [ ] При `proxy.enabled=true` и `static_via_nginx=true` не регистрировать `r.Static("/assets", ...)` в Gin.
   - [ ] При `proxy.enabled=true` включить обработку `X-Forwarded-Proto`, `X-Forwarded-For`, `X-Forwarded-Host` только от trusted источников.
   - [ ] При `proxy.enabled=true` не ломать existing `session_cookie_secure` логику: secure должен считаться true при внешнем HTTPS (через `X-Forwarded-Proto=https`).
+  - [ ] `request_id` обязателен: если пришел `X-Request-ID` — использовать его; если нет — генерировать.
+  - [ ] Всегда прокидывать `X-Request-ID` в ответ клиенту и во все downstream запросы.
 
 ### 10.2 Что остается нужным из `server.*`
 
@@ -305,6 +311,7 @@ TODO:
 TODO:
 - [ ] Trusted proxy policy: не доверять `X-Forwarded-*` от внешних клиентов напрямую.
 - [ ] Добавить middleware/helper для вычисления effective scheme/ip/host.
+- [ ] Корреляция логов: `request_id` должен совпадать в логах `nginx` и `web-ui-go`.
 - [ ] Проверить редиректы и абсолютные URL (чтобы не было mixed content / loop).
 - [ ] Логи: отделить `remote_addr` (nginx) и `real_ip` (клиент).
 - [ ] Обновить CSP/HSTS policy в контексте TLS termination на edge.
@@ -317,6 +324,7 @@ TODO:
   - [ ] direct mode: static отдает Gin
   - [ ] proxy mode: static отдает nginx, Gin static отключен
   - [ ] proxy mode: secure-cookie при `X-Forwarded-Proto=https`
+  - [ ] proxy mode: `X-Request-ID` не теряется на пути `client -> nginx -> web-ui-go -> response`
 - [ ] Документация:
   - [ ] `web-ui-go/config/README.md` (новая секция `proxy`)
   - [ ] root `README.md` (как запускать `direct`/`proxy` profile)

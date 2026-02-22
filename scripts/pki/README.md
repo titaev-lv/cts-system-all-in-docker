@@ -6,7 +6,7 @@ Scripts for generating and managing PKI infrastructure for CT-System mTLS commun
 
 These scripts automate the generation of:
 - **1 Root CA** (self-signed for dev)
-- **4 Server certificates** (MySQL, ClickHouse, HSM Service, CTS-Core)
+- **5 Server certificates** (MySQL, ClickHouse, HSM Service, CTS-Core, Web UI)
 - **16 Client certificates** (with appropriate OU for access control)
 
 ## Usage
@@ -91,11 +91,13 @@ Generates server certificates for all services that accept incoming connections.
 2. ClickHouse (`clickhouse.{key,crt}`)
 3. HSM Service (`hsm-service.{key,crt}`)
 4. CTS-Core (`cts-core.{key,crt}`)
+5. Web UI (`web-ui.{key,crt}`)
 
 **Features:**
 - Subject Alternative Names (SAN) for Docker network DNS
 - Valid for 825 days (~2.3 years)
 - Extensions: serverAuth, digitalSignature, keyEncipherment
+- Generates `<service>.fullchain.crt` (leaf + intermediate) for HTTPS servers
 
 **Options:**
 - `--force` - Regenerate existing certificates
@@ -103,6 +105,32 @@ Generates server certificates for all services that accept incoming connections.
 **Example:**
 ```bash
 ./scripts/pki/02-generate-server-certs.sh
+```
+
+### `install-dev-ca-linux.sh`
+
+Installs CT-System dev Root CA into Linux system trust store to avoid browser SSL warnings for `https://localhost`.
+
+**Requirements:**
+- Linux with `update-ca-certificates`
+- `sudo` access
+
+**Example:**
+```bash
+./scripts/pki/install-dev-ca-linux.sh
+```
+
+### `uninstall-dev-ca-linux.sh`
+
+Removes CT-System dev Root CA from Linux system trust store and browser NSS/Firefox profiles.
+
+**Requirements:**
+- Linux with `update-ca-certificates`
+- `sudo` access
+
+**Example:**
+```bash
+./scripts/pki/uninstall-dev-ca-linux.sh
 ```
 
 ### `03-generate-client-certs.sh`
@@ -231,9 +259,11 @@ volumes/pki/
 ├── hsm-service/
 │   ├── server/
 │   └── clients/          # With OU=2FA or OU=Trader
-└── cts-core/
-    ├── server/
-    └── clients/
+├── cts-core/
+│   ├── server/
+│   └── clients/
+└── web-ui/
+    └── server/
 ```
 
 ## Security Notes
