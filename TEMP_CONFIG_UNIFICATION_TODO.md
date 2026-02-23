@@ -125,7 +125,7 @@ rate_limit:
 - [x] Добавить поле в schema/config loaders.
 - [x] Проставить default `1048576` (1MB).
 - [x] Валидация (`>= 4096`, разумный верхний предел).
-- [x] Подключить к `http.Server.MaxHeaderBytes`.
+- [x] Подключить к `http.Server.MaxHeaderBytьжзпes`.
 - [x] Добавить тест на применение значения.
 
 ### Критерий готовности
@@ -243,18 +243,20 @@ proxy:
 ```
 
 TODO:
-- [ ] Добавить `proxy.*` в schema/config loader (`web-ui-go`).
-- [ ] Defaults/validation:
-  - [ ] `enabled=false`
-  - [ ] `trust_forward_headers=false`
-  - [ ] `trusted_hops>=1 && <=5`
-  - [ ] Валидация CIDR списка
-- [ ] Runtime-поведение:
-  - [ ] При `proxy.enabled=true` и `static_via_nginx=true` не регистрировать `r.Static("/assets", ...)` в Gin.
-  - [ ] При `proxy.enabled=true` включить обработку `X-Forwarded-Proto`, `X-Forwarded-For`, `X-Forwarded-Host` только от trusted источников.
-  - [ ] При `proxy.enabled=true` не ломать existing `session_cookie_secure` логику: secure должен считаться true при внешнем HTTPS (через `X-Forwarded-Proto=https`).
-  - [ ] `request_id` обязателен: если пришел `X-Request-ID` — использовать его; если нет — генерировать.
-  - [ ] Всегда прокидывать `X-Request-ID` в ответ клиенту и во все downstream запросы.
+- [x] Добавить `proxy.*` в schema/config loader (`web-ui-go`).
+- [x] Defaults/validation:
+  - [x] `enabled=false`
+  - [x] `trust_forward_headers=false`
+  - [x] `trusted_hops>=1 && <=5`
+  - [x] Валидация CIDR списка
+- [x] Runtime-поведение:
+  - [x] При `proxy.enabled=true` и `static_via_nginx=true` не регистрировать `r.Static("/assets", ...)` в Gin.
+  - [x] При `proxy.enabled=true` включить обработку `X-Forwarded-Proto`, `X-Forwarded-For`, `X-Forwarded-Host` только от trusted источников.
+  - [x] При `proxy.enabled=true` не ломать existing `session_cookie_secure` логику: secure должен считаться true при внешнем HTTPS (через `X-Forwarded-Proto=https`).
+  - [x] `request_id` обязателен: если пришел `X-Request-ID` — использовать его; если нет — генерировать.
+  - [x] Всегда прокидывать `X-Request-ID` в ответ клиенту и во все downstream запросы.
+    - Добавлен helper в `web-ui-go`: `middleware.NewRequestWithRequestID(...)` + unit tests.
+    - Требование для новых исходящих HTTP-вызовов: использовать этот helper (или `SetRequestIDHeaderFromContext`).
 
 ### 10.2 Что остается нужным из `server.*`
 
@@ -319,7 +321,7 @@ TODO:
 ### 10.6 Tests/Runbook/Docs
 
 TODO:
-- [ ] Unit tests для `proxy.*` validation.
+- [x] Unit tests для `proxy.*` validation.
 - [ ] Integration tests (минимум smoke):
   - [ ] direct mode: static отдает Gin
   - [ ] proxy mode: static отдает nginx, Gin static отключен
