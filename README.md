@@ -88,12 +88,38 @@ chmod +x init-system.sh
 ./init-system.sh
 ```
 
+### 2.1 Профили запуска (`proxy` / `direct`)
+
+По умолчанию Docker Compose читает `COMPOSE_PROFILES` из `.env` в корне проекта.
+Рекомендуемый дефолт:
+
+```env
+COMPOSE_PROFILES=proxy
+```
+
+Ручное переключение профилей:
+
+```bash
+# Proxy mode (nginx + web-ui)
+docker compose --profile proxy up -d
+
+# Direct mode (web-ui без nginx)
+docker compose --profile direct up -d
+```
+
+### 2.2 Короткий статус по web-ui dual-mode
+
+- Реализованы оба режима запуска: `direct` и `proxy`.
+- В `proxy` режиме TLS/HTTP2 и статика обслуживаются `nginx`, backend работает как internal upstream (`web-ui:8080`).
+- Добавлен smoke-сценарий: `make smoke-web-ui` (включая проверку `X-Request-ID`, redirect и optional secure-cookie).
+- Документация по `proxy.*` и forwarded headers вынесена в `services/web-ui-go/config/README.md`.
+
 **Скрипт выполнит:**
 - ✅ Проверку всех зависимостей (Docker, OpenSSL, bash)
 - ✅ Генерацию PKI инфраструктуры (Root CA + Intermediate CA)
 - ✅ Генерацию 4 серверных и 16 клиентских сертификатов
 - ✅ Проверку/клонирование сервисов из GitHub
-- ✅ Инициализацию конфигурационных файлов (.env, config.yaml)
+- ✅ Инициализацию конфигурационных файлов (.env, config.proxy.yaml, config.direct.yaml)
 - ✅ Запуск только доступных сервисов (MySQL + клонированные)
 - ✅ Создание базы данных `cts-system` в MySQL
 - ✅ Загрузку начальных данных из `volumes/mysql-dump/init.sql` (если файл существует)
@@ -197,8 +223,28 @@ make logs-mysql  # Логи MySQL
 ```bash
 make test        # Запустить тесты CTS-Core
 make test-hsm    # Запустить HSM integration тесты
+make smoke-web-ui # Smoke для web-ui direct/proxy
 make health      # Проверить здоровье всех сервисов
 ```
+
+#### Smoke-проверки web-ui (direct/proxy)
+
+```bash
+# Базовый прогон (статика, proxy/direct, request-id, redirect)
+make smoke-web-ui
+
+# Полный прогон с проверкой secure-cookie (нужны валидные креды web-ui)
+WEB_UI_SMOKE_LOGIN_USER=<login> \
+WEB_UI_SMOKE_LOGIN_PASS=<password> \
+make smoke-web-ui
+```
+
+Что проверяется:
+- `direct` mode: статика отдается `web-ui-direct` (Gin)
+- `proxy` mode: статика отдается `nginx`, backend `/assets` возвращает `404` (Gin static отключен)
+- `proxy` mode: `X-Request-ID` присутствует в ответе и совпадает с `web-ui-go` логами
+- `proxy` mode: HTTP→HTTPS redirect для `/login`
+- `proxy` mode (опционально): `Login`/`CTToken` cookies имеют `Secure` при HTTPS на edge
 
 ### Разработка
 
@@ -241,6 +287,7 @@ MYSQL_DATABASE=ct_system
 MYSQL_USER=devuser
 MYSQL_PASSWORD=devpass123
 TZ=Europe/Moscow
+COMPOSE_PROFILES=proxy
 ```
 
 ### Конфигурационные файлы

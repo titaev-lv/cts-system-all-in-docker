@@ -439,13 +439,35 @@ EOF
     fi
 fi
 
-if [ -d "$PROJECT_ROOT/services/web-ui-go" ] && [ -f "$PROJECT_ROOT/services/web-ui-go/config/config.example.yaml" ]; then
-    if [ ! -f "$PROJECT_ROOT/services/web-ui-go/config/config.yaml" ]; then
-        print_step "Creating web-ui-go config from example..."
-        cp "$PROJECT_ROOT/services/web-ui-go/config/config.example.yaml" "$PROJECT_ROOT/services/web-ui-go/config/config.yaml"
-        print_success "web-ui-go config created"
-    else
-        print_info "web-ui-go config already exists"
+if [ -d "$PROJECT_ROOT/services/web-ui-go" ]; then
+    if [ -f "$PROJECT_ROOT/services/web-ui-go/config/config.proxy.example.yaml" ] && [ ! -f "$PROJECT_ROOT/services/web-ui-go/config/config.proxy.yaml" ]; then
+        if [ -f "$PROJECT_ROOT/services/web-ui-go/config/config.yaml" ]; then
+            print_step "Migrating legacy web-ui-go proxy config to config.proxy.yaml..."
+            cp "$PROJECT_ROOT/services/web-ui-go/config/config.yaml" "$PROJECT_ROOT/services/web-ui-go/config/config.proxy.yaml"
+            print_success "web-ui-go proxy config migrated"
+        else
+            print_step "Creating web-ui-go proxy config from example..."
+            cp "$PROJECT_ROOT/services/web-ui-go/config/config.proxy.example.yaml" "$PROJECT_ROOT/services/web-ui-go/config/config.proxy.yaml"
+            print_success "web-ui-go proxy config created"
+        fi
+    elif [ -f "$PROJECT_ROOT/services/web-ui-go/config/config.proxy.yaml" ]; then
+        print_info "web-ui-go proxy config already exists"
+    fi
+
+    if [ -f "$PROJECT_ROOT/services/web-ui-go/config/config.direct.example.yaml" ] && [ ! -f "$PROJECT_ROOT/services/web-ui-go/config/config.direct.yaml" ]; then
+        print_step "Creating web-ui-go direct config from example..."
+        cp "$PROJECT_ROOT/services/web-ui-go/config/config.direct.example.yaml" "$PROJECT_ROOT/services/web-ui-go/config/config.direct.yaml"
+        print_success "web-ui-go direct config created"
+    elif [ -f "$PROJECT_ROOT/services/web-ui-go/config/config.direct.yaml" ]; then
+        print_info "web-ui-go direct config already exists"
+    fi
+
+    if [ -f "$PROJECT_ROOT/services/web-ui-go/config/config.example.yaml" ] && [ ! -f "$PROJECT_ROOT/services/web-ui-go/config/config.proxy.example.yaml" ]; then
+        print_warning "Legacy web-ui-go config.example.yaml detected; prefer config.proxy.example.yaml"
+    fi
+
+    if [ -f "$PROJECT_ROOT/services/web-ui-go/config/config.yaml" ]; then
+        print_warning "Legacy web-ui-go config.yaml detected; prefer config.proxy.yaml"
     fi
 fi
 

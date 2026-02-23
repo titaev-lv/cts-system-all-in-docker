@@ -1,4 +1,4 @@
-.PHONY: up down restart logs ps test clean build rebuild help
+.PHONY: up down restart logs ps test clean build rebuild help smoke-web-ui
 
 # Запустить все сервисы
 up:
@@ -52,6 +52,10 @@ test:
 test-hsm:
 	@echo "Running HSM integration tests..."
 	docker compose exec cts-core go test -v -tags=integration ./internal/hsm/...
+
+smoke-web-ui:
+	@echo "Running web-ui dual-mode smoke checks..."
+	./scripts/smoke/web-ui-dual-mode.sh
 
 # Пересборка образов
 build:
@@ -118,6 +122,7 @@ help:
 	@echo "  make ps            - Show service status"
 	@echo "  make test          - Run CTS-Core tests"
 	@echo "  make test-hsm      - Run HSM integration tests"
+	@echo "  make smoke-web-ui  - Run web-ui direct/proxy smoke checks"
 	@echo "  make build         - Build Docker images"
 	@echo "  make rebuild       - Rebuild images from scratch"
 	@echo "  make clean         - Remove all data (DANGER!)"
