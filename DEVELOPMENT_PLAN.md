@@ -52,13 +52,13 @@
 
 ## 🎯 ПРИОРИТЕТЫ РАЗРАБОТКИ
 
-### Priority 1: Стандартизация (2-3 дня) 🔴
+### Priority 1: Стандартизация 🔴
 
 **Проблема:** Разные подходы к критически важным аспектам системы создают технический долг и усложняют поддержку.
 
-#### 1.1. Унификация логирования (2-3 дня) 🔴
+#### 1.1. Унификация логирования ✅ DONE
 
-**КЛЮЧЕВАЯ ПРОБЛЕМА:** Разделенные подходы к логированию затрудняют отладку в Docker и мониторинг
+**Статус:** унификация завершена во всех сервисах.
 
 **Текущая ситуация:**
 
@@ -68,190 +68,6 @@
 | CTS-Core | ✅ slog | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
 | Trader | ✅ slog | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
 | Web UI | ✅ slog | ✅ JSON | ✅ | ✅ | ✅ lumberjack | ✅ Работает |
-
-**Статус Trader:** `docker logs ct-system-trader-1` показывает структурированные JSON логи.
-
-**Детальный анализ:** [LOGGING.md](LOGGING.md) (актуальный единый summary + чек-листы)
-
-### Требуемые изменения по сервисам
-
-#### CTS-Core
-```
-Priority: HIGH
-Impact: docker logs видны (DONE)
-Effort: 1-2 дня
-
-[x] Добавить os.Stdout в MultiWriter
-[x] Переключить на JSON формат (slog.NewJSONHandler)
-[x] Заменить custom rotatedFile на lumberjack
-
-[x] Добавить request_id middleware (X-Request-ID)
-[x] Разделить loggers/files для error/access/out_request/ws_access/ws_out/audit
-[x] Проброс request_id в access/error/out_request
-[x] Подключить access/out_request логирование в обработчиках
-[x] Подключить ws/audit логирование в обработчиках (WS stub)
-    
-[x] Тестирование:
-    - docker-compose up cts-core-1
-    - docker logs ct-system-cts-core-1 | head -20
-    - Expected: JSON strings with module, level, etc.
-```
-
-**Files to modify:**
-- [services/cts-core/internal/logger/logger.go](services/cts-core/internal/logger/logger.go)
-- middleware/handlers (request_id + access/out_request)
-
-**Reference implementation:** [services/hsm-service/internal/server/logger.go](services/hsm-service/internal/server/logger.go)
-
----
-
-#### Trader (1 день)
-```
-Priority: HIGH
-Impact: docker logs станут видны
-Effort: 1 day (identical changes to CTS-Core)
-
-[x] Same as CTS-Core:
-    - os.Stdout in MultiWriter
-    - JSON format (slog.NewJSONHandler)
-    - Replace rotatedFile with lumberjack
-
-[x] File to modify:
-    - services/trader/internal/logger/logger.go
-    
-[ ] Difference from CTS-Core:
-    - Trader has Trade logger module (use same pattern)
-    - Both modules (main + trade) write to single file
-```
-
-**Files to modify:**
-- [services/trader/internal/logger/logger.go](services/trader/internal/logger/logger.go)
-
----
-
-#### Web UI (2-3 дня)
-```
-Priority: HIGH
-Complexity: Medium (library migration + stream splitting)
-Impact: Unified with other services + new access log analytics
-
-[x] PHASE 1: Migration from legacy logger → slog (DONE)
-    [x] Remove legacy logger API usage
-    [x] Use `log/slog` logger wrapper
-
-[x] PHASE 2: Implement Access Log Splitting (DONE)
-    [x] `error.log` + `access.log`
-    [x] `internal/middleware/access_log.go`
-    [x] `audit.log` + `internal/middleware/audit_log.go`
-    [x] module tags + user_id in access log
-    [x] lumberjack rotation (separate policies)
-
-[x] PHASE 3: Final hardening (1 day)
-    [x] add `request_id` middleware (`X-Request-ID`)
-    [x] propagate `request_id` to access + error logs and response header
-    [x] docker debug/release regression checks
-    [x] short runbook for logging troubleshooting
-
-[x] Configuration:
-    - logging:
-                level: "info"
-                format: "json" | "text"
-                output: "stdout" | "file" | "both"
-                file: "/app/logs/error.log"
-                access_file: "/app/logs/access.log"
-                audit_file: "/app/logs/audit.log"
-                max_size/max_backups/max_age
-
-[x] Files created/modified:
-    - services/web-ui-go/internal/logger/logger.go
-    - services/web-ui-go/internal/middleware/access_log.go
-    - services/web-ui-go/internal/middleware/audit_log.go
-    - services/web-ui-go/cmd/web/main.go
-    - services/web-ui-go/config/config.yaml
-```
-
-**Detailed guide:** See [services/web-ui-go/DEVELOPMENT_PLAN.md](services/web-ui-go/DEVELOPMENT_PLAN.md) Section 2 "КРИТИЧНО: Унификация логирования"
-
----
-
-#### HSM Service (optional improvements)
-```
-Status: Updated ✅
-Priority: LOW (improvements only, not blocking)
-
-[x] Split audit, access, and error logs with rotation + JSON
-    - audit.log, access.log, error.log with lumberjack
-    - audit/access can mirror to stdout; error can mirror debug
-
-[x] Request tracking in audit/access/error logs
-    - request_id header X-Request-ID
-    - status/result/error_code, key_id, audit context
-
-[x] Startup validation of log paths
-    - fail fast if log dir is not writable
-    - default paths and env overrides via config
-
-[x] Docs + integration/e2e updates
-    - log mounts in docker-compose and tests
-    - references in monitoring/troubleshooting
-
-[x] Graceful shutdown + panic recovery
-    - SIGTERM/SIGINT -> Shutdown(ctx)
-    - CloseLogger() on exit
-    - recovery middleware logs stack in error.log
-```
-
----
-
-### 📊 Unified Logging Standard Summary
-
-**Technology Stack:**
-- **Library:** `log/slog` (Go stdlib 1.21+, no external deps)
-- **Format:** JSON (for log aggregation tools)
-- **Output:** MultiWriter(os.Stdout, logfile)
-- **Rotation:** lumberjack.Logger (size + age + compress + cleanup)
-- **Modularity:** slog.With("module", "name") for component tracking
-
-**Log Files (per service):**
-```
-/var/log/cts-core/
-  └── error.log*          # All logs (JSON format)
-
-/var/log/trader/
-    ├── error.log*          # System/error logs (JSON)
-    ├── out_request.log*    # Outbound request logs (JSON)
-    ├── ws_in.log*          # Inbound WS logs (JSON)
-    ├── ws_out.log*         # Outbound WS logs (JSON)
-    └── audit.log*          # Audit logs (JSON)
-
-/var/log/web-ui-go/
-  ├── access.log*         # HTTP requests only (JSON, 50MB limit)
-  └── error.log*          # Errors + events (JSON, 100MB limit)
-
-/var/log/hsm-service/
-    ├── audit.log*          # Audit logs (JSON format)
-    ├── access.log*         # HTTP access logs (JSON format)
-    └── error.log*          # Error/system logs (JSON format)
-```
-
-**Where \* means rotated files:**
-```
-error.log              # current
-error.log.1            # backup 1 (if rotated)
-error.log.1.gz         # compressed
-error.log.2.gz
-error.log.3.gz
-```
-
-**Benefits:**
-- ✅ All logs visible in `docker logs <service>`
-- ✅ JSON format → easy to parse in ELK/Loki/Grafana
-- ✅ Automatic rotation, compression, and cleanup
-- ✅ No external logging dependencies
-- ✅ Web UI access logs for analytics
-- ✅ Consistent across all 4 services
-
----
 
 **Результат:**
 - Все логи видны в `docker logs <service>`
@@ -269,67 +85,45 @@ error.log.3.gz
 
 ---
 
-#### 1.2. Унификация конфигурации (0.5 дня)
+#### 1.2. Унификация конфигурации ✅ DONE
 
 **Текущая ситуация:**
 
-| Сервис | Формат | Env override | Validation |
-|--------|--------|--------------|------------|
-| HSM | YAML | ✅ | ✅ |
-| CTS-Core | YAML | ✅ | ✅ |
-| Trader | YAML | ✅ | ✅ |
-| Web UI | YAML | ✅ | ✅ |
+| Сервис | Формат конфига | Env override | Validation | Примечание |
+|--------|----------------|--------------|------------|------------|
+| HSM | YAML (`config.yaml`) | ✅ (`HSM_*`) | ✅ | logging и runtime-параметры синхронизированы |
+| CTS-Core | YAML (`conf/config.yaml`) | ✅ (`CTS_*`) | ✅ | единая схема логов/путей и `metrics` секция в конфиге |
+| Trader | YAML (`conf/config.yaml`) | ✅ (`TRADER_*`) | ✅ | унифицированы stream paths + `*_to_stdout` флаги |
+| Web UI | YAML (`config/*.yaml`) | ✅ (`CT_*`) | ✅ | proxy/direct профили синхронизированы, logging-флаги добавлены |
 
-**Проблема:**
-- Trader использует YAML (выровнен со стандартом остальных сервисов)
-- Требуется удерживать единый ENV override pattern между сервисами
-
-**Решение:**
-- Trader: поддерживать единый YAML + ENV override подход (как CTS-Core и HSM)
-- Стандартизировать ENV override pattern
-
-**Задачи:**
-```
-[x] Trader: config.yaml используется как основной формат
-[x] Trader: Добавить поддержку ENV variables (актуальные runtime секции)
-[ ] Проверить: все сервисы читают ENV из docker-compose.yml
-[ ] Документация: Обновить README.md с примерами конфигов
-```
+**Что зафиксировано как итог унификации:**
+- Все сервисы используют YAML как основной формат runtime-конфигурации.
+- Для каждого сервиса закреплён единый префикс ENV override.
+- Конфигурационные примеры (`config.example`/profile configs) синхронизированы с runtime-схемой.
+- Документация по конфигам обновлена в root и service-level планах/README.
 
 ---
 
-#### 1.3. Стандартизация healthchecks (0.5 дня)
+#### 1.3. Стандартизация healthchecks
 
-**Текущая ситуация:**
-- ✅ HSM: `/health` endpoint (HTTPS)
-- ✅ MySQL: `mysqladmin ping`
-- ⚠️ CTS-Core: healthcheck есть, но deadlock при старте
-- ⚠️ Trader: healthcheck отсутствует
-- ✅ Web UI: HTTP endpoint
-
-**Решение:**
-- Все HTTP сервисы: `/health` endpoint (GET)
-- Стандартный формат ответа:
-  ```json
-  {
-    "status": "healthy",
-    "service": "cts-core",
-    "version": "1.4.0",
-    "uptime": "2h34m12s",
-    "dependencies": {
-      "mysql": "connected",
-      "hsm": "connected"
-    }
-  }
-  ```
+**Решение (зафиксировано):**
+- **DEV (Docker Compose):** использовать process-level healthcheck (`pgrep`/аналог), без обязательной стандартизации HTTP `/health`.
+- **PROD (боевые серверы, без Docker):**
+  - **Trader:** не имеет входящего health endpoint; статус определяется в `CTS-Core` по `WS ping/pong` и heartbeat.
+  - **Trader (локально):** контроль зависаний и авто-восстановление через `systemd watchdog` + `Restart=always`.
+  - **HSM:** без изменений (оставляем текущий `/health` по mTLS).
+  - **CTS-Core:** отдельный health endpoint по mTLS; агрегирует статус `HSM` и `Trader`.
+  - **Web UI:** открытый `/healthz` только с минимальным ответом `true/false`.
+- **Ограничение на раскрытие информации:** для monitoring endpoint'ов не выдаём детали зависимостей, stack/error текст, версии и внутренние поля состояния в публичном ответе.
 
 **Задачи:**
 ```
-[ ] CTS-Core: Исправить deadlock при старте (см. Phase 1.4)
-[ ] CTS-Core: Улучшить /health (добавить dependencies check)
-[ ] Trader: Добавить /health endpoint на отдельном порту
-[ ] Docker-compose: Обновить healthcheck для всех сервисов
-[ ] Тестирование: make health-check (проверка всех сервисов)
+[ ] Docker Compose: унифицировать healthcheck на process-level (`pgrep`/аналог) для dev-профиля
+[ ] Trader: закрепить health-модель без входящего endpoint (источник статуса = WS ping/pong в CTS-Core)
+[ ] Trader: оформить systemd watchdog/runbook для production (без Docker)
+[ ] CTS-Core: реализовать mTLS health endpoint с агрегированным статусом HSM/Trader
+[ ] Web UI: зафиксировать открытый `/healthz` с ответом только true/false
+[ ] Документация: синхронизировать README/ops runbook по dev/prod политике healthchecks
 ```
 
 ---
@@ -665,7 +459,7 @@ gantt
 ### Week 1 (Стандартизация)
 - [x] Все сервисы: логи видны в `docker logs`
 - [x] Единый формат: JSON (slog)
-- [ ] Единая конфигурация: YAML + ENV
+- [x] Единая конфигурация: YAML + ENV
 - [ ] Все healthchecks работают
 - [ ] Документация обновлена
 
@@ -754,7 +548,7 @@ make up
 
 ```
 [x] Logging: используется slog + JSON + stdout
-[ ] Config: YAML с ENV override
+[x] Config: YAML с ENV override
 [ ] Tests: unit + integration
 [ ] Errors: wrapped с context
 [ ] Healthcheck: работает
@@ -806,7 +600,7 @@ make up
 
 **Вопросы для обсуждения:**
 - Web UI: нужна ли отдельная структура полей для SIEM/ELK?
-- Trader config: YAML миграция завершена, следующий шаг — env override pattern
+- Trader config: YAML + ENV override унификация завершена
 - CI/CD: какой pipeline предпочтительнее? (GitHub Actions, GitLab CI, Jenkins)
 
 ---
