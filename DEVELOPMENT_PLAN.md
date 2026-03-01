@@ -113,31 +113,24 @@
   - **Trader (локально):** контроль зависаний и авто-восстановление через `systemd watchdog` + `Restart=always`.
   - **HSM:** без изменений (оставляем текущий `/health` по mTLS).
   - **CTS-Core:** отдельный health endpoint по mTLS; агрегирует статус `HSM` и `Trader`.
-  - **Web UI:** открытый `/healthz` только с минимальным ответом `true/false`.
+   - **Web UI:** открытый `/health` только с минимальным ответом `true/false`.
 - **Ограничение на раскрытие информации:** для monitoring endpoint'ов не выдаём детали зависимостей, stack/error текст, версии и внутренние поля состояния в публичном ответе.
 
 **Задачи:**
 ```
-[ ] Docker Compose: унифицировать healthcheck на process-level (`pgrep`/аналог) для dev-профиля
-[ ] Trader: закрепить health-модель без входящего endpoint (источник статуса = WS ping/pong в CTS-Core)
-[ ] Trader: оформить systemd watchdog/runbook для production (без Docker)
-[ ] CTS-Core: реализовать mTLS health endpoint с агрегированным статусом HSM/Trader
-[ ] Web UI: зафиксировать открытый `/healthz` с ответом только true/false
-[ ] Документация: синхронизировать README/ops runbook по dev/prod политике healthchecks
+[x] Docker Compose: унифицировать healthcheck на process-level (`pgrep`/аналог) для dev-профиля
+[ ] Trader: закрепить health-модель без входящего endpoint (источник статуса = WS ping/pong в CTS-Core, реализация в Priority 3: Phase 2.1/2.2)
+[ ] Trader: оформить systemd watchdog/runbook для production (без Docker) — перенести на этап подготовки Debian PROD инструкции
+[ ] CTS-Core: реализовать mTLS health endpoint с агрегированным статусом HSM/Trader (Trader часть после WS heartbeat в Priority 3)
+[x] Web UI: зафиксировать открытый `/health` с ответом только true/false
+[ ] Документация: синхронизировать README/ops runbook по dev/prod политике healthchecks — перенести на этап Debian PROD инструкции (после WS health-агрегации)
 ```
 
 ---
 
-#### 1.4. Документация и CI/CD подготовка (1 день)
+#### 1.4. Документация и CI/CD подготовка (1 день) ⏸️
 
-**Задачи:**
-```
-[ ] README.md: Обновить с учетом стандартизации
-[ ] ARCHITECTURE.md: Добавить диаграммы взаимодействия сервисов
-[ ] API_SPECIFICATION.md: Унифицировать форматы всех API
-[ ] .github/workflows/: Подготовить CI pipeline (lint, test, build)
-[ ] Makefile: Добавить targets для стандартизации (make lint-all, make test-all)
-```
+**Статус:** отложено; переносим после `Priority 5`.
 
 ---
 
@@ -220,6 +213,7 @@
 ```
 [ ] internal/api/ws/trader_handler.go
 [ ] Connection pooling + heartbeat (30s)
+[ ] WS ping/pong: передавать heartbeat в Session Manager для health-агрегации
 [ ] Message routing (task assignment)
 [ ] Reconnection handling
 [ ] Tests: WS integration tests
@@ -240,6 +234,8 @@
 [ ] internal/session/manager.go
 [ ] internal/session/trader.go
 [ ] internal/session/heartbeat.go
+[ ] Агрегировать состояние Trader по ping/pong (online/stale/offline + last_seen)
+[ ] Экспортировать агрегированный статус Trader в `CTS-Core` endpoint `/health`
 [ ] DB integration (trader_session table)
 [ ] Metrics: active_traders, heartbeat_latency
 [ ] Tests: session lifecycle
@@ -319,6 +315,22 @@
 ```
 
 **Статус:** HSM уже production-ready, улучшения можно отложить
+
+---
+
+### Priority 5.5: Документация и CI/CD подготовка (1 день) ⚪
+
+**Отложено до этапа после Priority 5.**
+
+**Задачи:**
+```
+[ ] README.md: Обновить с учетом стандартизации
+[ ] Debian PROD инструкция: добавить раздел по Trader systemd watchdog (перенесено из 1.3)
+[ ] ARCHITECTURE.md: Добавить диаграммы взаимодействия сервисов
+[ ] API_SPECIFICATION.md: Унифицировать форматы всех API
+[ ] .github/workflows/: Подготовить CI pipeline (lint, test, build)
+[ ] Makefile: Добавить targets для стандартизации (make lint-all, make test-all)
+```
 
 ---
 
@@ -419,10 +431,9 @@ gantt
     section Priority 1: Стандартизация
     Унификация логирования       :p1a, 2026-02-01, 1d
     Конфигурация + healthchecks  :p1b, after p1a, 1d
-    Документация                 :p1c, after p1b, 1d
     
     section Priority 2: CTS-Core Phase 1
-    Phase 1.4: State management  :p2a, after p1c, 2d
+   Phase 1.4: State management  :p2a, after p1b, 2d
     Phase 1.5: REST API          :p2b, after p2a, 3d
     
     section Priority 3: WebSocket
@@ -438,18 +449,21 @@ gantt
     section Priority 5: HSM (опционально)
     CLI unification              :p5a, after p4c, 2d
     Multi-slot architecture      :p5b, after p5a, 3d
+
+   section Priority 5.5: Документация/CI-CD
+   Documentation + CI/CD        :p55a, after p5b, 1d
     
     section Priority 6: Web UI (опционально)
     WebSocket integration        :p6a, after p3c, 3d
     Live price feeds             :p6b, after p6a, 2d
-    Logging migration slog       :p6c, after p1c, 1d
+   Logging migration slog       :p6c, after p55a, 1d
     Advanced analytics           :p6d, after p6b, 2d
 ```
 
 **Итого:**
-- **Week 1-2**: Стандартизация + CTS-Core Phase 1 complete
+- **Week 1-2**: Стандартизация (без документации) + CTS-Core Phase 1 core
 - **Week 3-4**: WebSocket infrastructure (CTS-Core + Trader)
-- **Week 5+**: Business logic, testing, production hardening
+- **Week 5+**: HSM optional improvements + отложенные Documentation/CI-CD (Priority 5.5)
 - **Week 6+** (опционально): Web UI enhancements (live updates, price feeds)
 
 ---
@@ -461,7 +475,7 @@ gantt
 - [x] Единый формат: JSON (slog)
 - [x] Единая конфигурация: YAML + ENV
 - [ ] Все healthchecks работают
-- [ ] Документация обновлена
+- [ ] Документация обновлена (перенесено на этап Priority 5.5)
 
 ### Week 2 (CTS-Core Phase 1 Complete)
 - [ ] State management работает (load/save/recovery)
@@ -586,22 +600,21 @@ make up
 
 ## 🚀 Next Steps
 
-**Сегодня (2026-02-01):**
-1. ✅ Удалить MIGRATE_SYS_TO_DOCKER.md (выполнено)
-2. ✅ Создать DEVELOPMENT_PLAN.md (этот файл)
-3. 🔴 **Начать Priority 1.1**: Унификация логирования
-   - Исправить CTS-Core logger (добавить stdout)
-   - Исправить Trader logger (добавить stdout)
-   - Протестировать `docker logs` для всех сервисов
+**Сейчас (актуально):**
+1. 🔴 **Завершить Priority 1.3** (healthchecks policy)
+   - Зафиксировать задачи, зависящие от WS (ping/pong aggregation в CTS-Core)
+   - Подготовить реализацию `CTS-Core /health` с учетом HSM + Trader статуса
+2. 🟡 **Продолжить Priority 2**: Phase 1.4 State Management в CTS-Core
+3. 🟢 **Подготовить Priority 3**: WS infrastructure (Phase 2.1/2.2)
 
-**Завтра:**
-- Продолжить Priority 1: конфигурация + healthchecks
-- Начать Priority 2: Phase 1.4 State Management
+**После Priority 5:**
+- Вернуться к отложенному блоку **Priority 5.5** (Документация + CI/CD)
+- Включить Debian PROD инструкцию (в т.ч. Trader systemd watchdog)
 
 **Вопросы для обсуждения:**
 - Web UI: нужна ли отдельная структура полей для SIEM/ELK?
 - Trader config: YAML + ENV override унификация завершена
-- CI/CD: какой pipeline предпочтительнее? (GitHub Actions, GitLab CI, Jenkins)
+- CI/CD: какой pipeline предпочтительнее? (GitHub Actions, GitLab CI, Jenkins) — реализуем в Priority 5.5
 
 ---
 
