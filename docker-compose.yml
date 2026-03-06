@@ -85,8 +85,11 @@ services:
       - proxy
     volumes:
       - ./services/web-ui-go/config/config.proxy.yaml:/app/config/config.yaml:ro
+      - ./volumes/pki/ca/ca.crt:/app/pki/ca/ca.crt:ro
       - ./volumes/pki/mysql/clients/web-ui/web-ui-mysql.crt:/app/pki/mysql/web-ui-mysql.crt:ro
       - ./volumes/pki/mysql/clients/web-ui/web-ui-mysql.key:/app/pki/mysql/web-ui-mysql.key:ro
+      - ./volumes/pki/hsm-service/clients/web-ui-2fa/web-ui-hsm-2fa.crt:/app/pki/hsm-service/clients/web-ui-2fa/web-ui-hsm-2fa.crt:ro
+      - ./volumes/pki/hsm-service/clients/web-ui-2fa/web-ui-hsm-2fa.key:/app/pki/hsm-service/clients/web-ui-2fa/web-ui-hsm-2fa.key:ro
       - ./services/web-ui-go/logs:/var/log/web-ui
     environment:
       - TZ=${TZ:-UTC}
@@ -123,8 +126,11 @@ services:
       - direct
     volumes:
       - ./services/web-ui-go/config/config.direct.yaml:/app/config/config.yaml:ro
+      - ./volumes/pki/ca/ca.crt:/app/pki/ca/ca.crt:ro
       - ./volumes/pki/mysql/clients/web-ui/web-ui-mysql.crt:/app/pki/mysql/web-ui-mysql.crt:ro
       - ./volumes/pki/mysql/clients/web-ui/web-ui-mysql.key:/app/pki/mysql/web-ui-mysql.key:ro
+      - ./volumes/pki/hsm-service/clients/web-ui-2fa/web-ui-hsm-2fa.crt:/app/pki/hsm-service/clients/web-ui-2fa/web-ui-hsm-2fa.crt:ro
+      - ./volumes/pki/hsm-service/clients/web-ui-2fa/web-ui-hsm-2fa.key:/app/pki/hsm-service/clients/web-ui-2fa/web-ui-hsm-2fa.key:ro
       - ./services/web-ui-go/logs:/var/log/web-ui
     environment:
       - TZ=${TZ:-UTC}
