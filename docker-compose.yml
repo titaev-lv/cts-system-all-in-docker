@@ -90,6 +90,8 @@ services:
       - ./volumes/pki/mysql/clients/web-ui/web-ui-mysql.key:/app/pki/mysql/web-ui-mysql.key:ro
       - ./volumes/pki/hsm-service/clients/web-ui-2fa/web-ui-hsm-2fa.crt:/app/pki/hsm-service/clients/web-ui-2fa/web-ui-hsm-2fa.crt:ro
       - ./volumes/pki/hsm-service/clients/web-ui-2fa/web-ui-hsm-2fa.key:/app/pki/hsm-service/clients/web-ui-2fa/web-ui-hsm-2fa.key:ro
+      - ./volumes/pki/hsm-service/clients/web-ui-trader/web-ui-hsm-trader.crt:/app/pki/hsm-service/clients/web-ui-trader/web-ui-hsm-trader.crt:ro
+      - ./volumes/pki/hsm-service/clients/web-ui-trader/web-ui-hsm-trader.key:/app/pki/hsm-service/clients/web-ui-trader/web-ui-hsm-trader.key:ro
       - ./services/web-ui-go/logs:/var/log/web-ui
     environment:
       - TZ=${TZ:-UTC}
@@ -131,6 +133,8 @@ services:
       - ./volumes/pki/mysql/clients/web-ui/web-ui-mysql.key:/app/pki/mysql/web-ui-mysql.key:ro
       - ./volumes/pki/hsm-service/clients/web-ui-2fa/web-ui-hsm-2fa.crt:/app/pki/hsm-service/clients/web-ui-2fa/web-ui-hsm-2fa.crt:ro
       - ./volumes/pki/hsm-service/clients/web-ui-2fa/web-ui-hsm-2fa.key:/app/pki/hsm-service/clients/web-ui-2fa/web-ui-hsm-2fa.key:ro
+      - ./volumes/pki/hsm-service/clients/web-ui-trader/web-ui-hsm-trader.crt:/app/pki/hsm-service/clients/web-ui-trader/web-ui-hsm-trader.crt:ro
+      - ./volumes/pki/hsm-service/clients/web-ui-trader/web-ui-hsm-trader.key:/app/pki/hsm-service/clients/web-ui-trader/web-ui-hsm-trader.key:ro  
       - ./services/web-ui-go/logs:/var/log/web-ui
     environment:
       - TZ=${TZ:-UTC}
