@@ -443,7 +443,7 @@ git commit -m "Fix session timeout"
 - Базовый scheduler cycle + runtime telemetry
 - Compose smoke runbook и deterministic smoke tooling
 
-### 🔄 Phase 1.5 Finalization (Current)
+### ✅ Phase 1.5 Finalization (Done)
 - `/metrics`
 - Prometheus wiring
 - integration tests

@@ -2,7 +2,7 @@
 
 > **Версия**: 1.1  
 > **Дата**: 2026-03-14  
-> **Статус**: Docker окружение стабильно | CTS-Core Phase 2 завершена | Фокус на Phase 1.5 finalization
+> **Статус**: Docker окружение стабильно | CTS-Core Phase 2 завершена | CTS-Core Phase 1.5 завершена | Фокус на Phase 3
 
 ---
 
@@ -27,7 +27,7 @@
 - ✅ Phase 1.2: MySQL pool + repositories (8 repos)
 - ✅ Phase 1.3: HSM client (dual context: trading + 2FA)
 - ✅ Phase 1.4: State management
-- 🟡 Phase 1.5: Finalization (`/metrics`, Prometheus wiring, integration tests)
+- ✅ Phase 1.5: Finalization (`/metrics`, Prometheus wiring, integration tests)
 - ✅ Phase 2: WebSocket runtime + session lifecycle + scheduler skeleton + smoke/runbook
 - ⏳ Phase 3: Task scheduler business logic + load balancing
 - ⏳ Phase 4: Full integration + Trade results
@@ -134,7 +134,7 @@
 
 ---
 
-### Priority 2: CTS-Core Phase 1.5 Finalization (5-7 дней) 🟡
+### Priority 2: CTS-Core Phase 1.5 Finalization (завершено) ✅
 
 #### 2.1. Phase 1.4: State Management (завершено)
 
@@ -169,8 +169,8 @@
 [x] WS runtime baseline (`trader.register`, `trader.heartbeat`)
 [x] Session lifecycle persistence (`TRADER_SESSION`)
 [x] Scheduler runtime skeleton
-[ ] `/metrics` endpoint и exporter wiring
-[ ] Integration tests (compose health + ws lifecycle)
+[x] `/metrics` endpoint и exporter wiring
+[x] Integration tests (compose health + ws lifecycle)
 ```
 
 Примечание:
