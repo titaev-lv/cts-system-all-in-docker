@@ -123,9 +123,13 @@ docker logs --since 2m ct-system-web-ui | tail -n 50
 ```bash
 docker compose up -d mysql hsm cts-core
 docker compose ps mysql hsm cts-core
-curl -sS http://127.0.0.1:8080/health
-curl -sS http://127.0.0.1:8080/ready
+curl -k -sS https://127.0.0.1:8080/health || curl -sS http://127.0.0.1:8081/health
+curl -k -sS https://127.0.0.1:8080/ready || curl -sS http://127.0.0.1:8081/ready
 docker logs --since 2m ct-system-cts-core | tail -n 80
+
+# deterministic WS lifecycle smoke
+cd services/cts-core
+./tests/smoke_phase2_ws_lifecycle.sh
 ```
 
 ---
@@ -183,7 +187,7 @@ make logs
 
 1. Добавить `make test-web-ui`, `make test-cts-core`, `make test-hsm`, `make test-trader` (service-local)
 2. Добавить `make test-int-web-ui`, `make test-int-cts-core` (minimal integration)
-3. Вынести smoke-check scripts в `scripts/testing/`
+3. Поддерживать smoke-check scripts в service-local `tests/` (например `services/cts-core/tests/`)
 4. Для trader: поддерживать актуальный integration wiring в root compose
 
 ---

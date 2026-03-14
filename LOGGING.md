@@ -12,7 +12,7 @@
 | Service | Library | Format | Streams | Stdout | Rotation | request_id | Status |
 |---|---|---|---|---|---|---|---|
 | HSM | `log/slog` | JSON | `error` + `access` + `audit` | ✅ | ✅ `lumberjack` | ✅ | ✅ Reference |
-| CTS-Core | `log/slog` | JSON | `error` + `access` + `out_request` + `ws_*` + `audit` | ✅ | ✅ `lumberjack` | ✅ | ⚠️ WS protocol hardening |
+| CTS-Core | `log/slog` | JSON | `error` + `access` + `out_request` + `ws_*` + `audit` | ✅ | ✅ `lumberjack` | ✅ | ✅ Runtime baseline hardened |
 | Trader | `log/slog` | JSON | `error` + `out_request` + `ws_in` + `ws_out` + `audit` | ✅ | ✅ `lumberjack` | ✅ (outbound) | ✅ Runtime validated |
 | Web-UI Go | `log/slog` | JSON/Text | `error` + `access` + `audit` | ✅ | ✅ `lumberjack` | ✅ | ✅ Implemented + hardened |
 
@@ -79,7 +79,7 @@ CTS-Core orchestrates critical control-plane operations (traders, config, assign
 - Audit model/repository exists for retention/query flow
 
 ### Remaining scope
-- WS protocol hardening / completion around event flow consistency
+- Поддерживать совместимость лог-схемы при расширении WS protocol (task dispatch/results)
 
 ---
 
@@ -182,7 +182,7 @@ docker logs --since 2m ct-system-cts-core | tail -n 80
 ## 6) Priority Queue (Now)
 
 1. Logging unification topic: closed
-2. CTS-Core WS protocol hardening remains as protocol/functional work (not logging baseline)
+2. CTS-Core logging baseline закрыт; дальше только поддержка схемы при новых WS action-ах
 3. Keep Web-UI audit/access/error schema stable and compatible with future centralized ingestion
 
 ---

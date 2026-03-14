@@ -5,10 +5,11 @@
 ## 📚 Документация
 
 - **[DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)** - Общий план разработки (начните отсюда!)
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Архитектура системы
 - **[LOGGING.md](LOGGING.md)** - Единый документ по логированию (Priority 1)
 - **[TESTING.md](TESTING.md)** - Тестовая стратегия (service-local / integration / E2E)
-- **[HSM_ROTATION.md](HSM_ROTATION.md)** - HSM key rotation (готово)
+- **[AUDIT_SYSTEM_PLAN.md](AUDIT_SYSTEM_PLAN.md)** - План аудита и трассировки событий
+- **[docs/MYSQL_SSL_SETUP.md](docs/MYSQL_SSL_SETUP.md)** - Настройка SSL для MySQL
+- **[docs/PKI_INFRASTRUCTURE_PLAN.md](docs/PKI_INFRASTRUCTURE_PLAN.md)** - PKI инфраструктура
 - **services/\*/DEVELOPMENT_PLAN.md** - Детальные планы сервисов
 
 ## 🏗️ Архитектура
@@ -17,8 +18,8 @@
 
 - **MySQL** - общая база данных
 - **HSM Service** - служба управления ключами и шифрования (production-ready)
-- **CTS-Core** - центральный оркестратор (Phase 1.3 complete, 1.4 in progress)
-- **Trader** - торговые сервисы (Phase 1 complete, Phase 2 planned)
+- **CTS-Core** - центральный оркестратор (Phase 2 завершена: WS lifecycle + session persistence + scheduler skeleton)
+- **Trader** - торговые сервисы (Phase 1 complete, интеграция с CTS-Core в развитии)
 - **Web UI** - административная панель (operational)
 
 ## Предварительные требования
@@ -185,7 +186,7 @@ ct-system/
 ├── .env                     # Переменные окружения (не в git)
 ├── Makefile                 # Команды для управления
 ├── README.md                # Этот файл
-├── ct-system.code-workspace # VS Code workspace
+├── cts-system.code-workspace # VS Code workspace
 │
 ├── services/                # Все сервисы
 │   ├── cts-core/           # CTS-Core сервис (git repo)
@@ -268,14 +269,21 @@ make clean       # Удалить все данные (ОПАСНО!)
 |-----------|------|-----------------------------|---------------------|
 | MySQL     | 3306 | localhost:3306              | MySQL database      |
 | HSM       | 8443 | https://localhost:8443      | HSM API (TLS)       |
-| CTS-Core  | 8080 | http://localhost:8080       | REST API (Phase 1.5+)|
-| CTS-Core  | 8081 | ws://localhost:8081         | WebSocket (Phase 2+)|
+| CTS-Core  | 8080-8081 | https://localhost:8080/health | REST/health (TLS в compose-профиле) |
+| CTS-Core  | 8080-8081 | wss://localhost:8080/ws       | WebSocket runtime |
 
 ### Health Checks
 
 - MySQL: `docker compose exec mysql mysqladmin ping`
 - HSM: `curl -k https://localhost:8443/health`
-- CTS-Core: `curl http://localhost:8080/health`
+- CTS-Core: `curl -k https://localhost:8080/health || curl -sS http://localhost:8081/health`
+
+### CTS-Core Phase 2 smoke
+
+```bash
+cd services/cts-core
+./tests/smoke_phase2_ws_lifecycle.sh
+```
 
 ## 🔐 Конфигурация
 
@@ -391,12 +399,14 @@ sudo lsof -i :8080
 
 ## 📚 Документация
 
-- [Миграция на Docker](MIGRATE_SYS_TO_DOCKER.md) - План миграции
 - [MySQL SSL Configuration](docs/MYSQL_SSL_SETUP.md) - Настройка SSL и создание пользователей
+- [PKI Infrastructure Plan](docs/PKI_INFRASTRUCTURE_PLAN.md) - PKI и сертификаты для сервисов
 - [CTS-Core Architecture](services/cts-core/ARCHITECTURE.md)
 - [CTS-Core Development Plan](services/cts-core/DEVELOPMENT_PLAN.md)
+- [CTS-Core Phase 2 Smoke Runbook](services/cts-core/guides/PHASE2_SMOKE_RUNBOOK.md)
 - [HSM Service API](services/hsm-service/API.md)
 - [HSM Architecture](services/hsm-service/ARCHITECTURE.md)
+- [Audit System Plan](AUDIT_SYSTEM_PLAN.md) - единая модель audit/event chain
 - [Testing Strategy](TESTING.md) - Матрица и уровни тестирования CT-SYSTEM
 
 ## 🔄 Git Strategy
@@ -410,7 +420,7 @@ sudo lsof -i :8080
 
 ```bash
 # Изменения в docker-compose.yml
-cd /home/dev/docker/ct-system
+cd /home/dev/docker/cts-system
 git add docker-compose.yml
 git commit -m "Update MySQL healthcheck"
 
@@ -422,25 +432,26 @@ git commit -m "Fix session timeout"
 
 ## 🎯 Roadmap
 
-### ✅ Phase 1.4 (Current)
+### ✅ Phase 1.4 (Done)
 - MySQL, HSM, CTS-Core в Docker
 - Session Manager
 - Heartbeat механизм
 
-### 🔄 Phase 1.5 (In Progress)
-- REST API для управления
-- Task Scheduler
-- Load Balancing алгоритмы
+### ✅ Phase 2 (Done)
+- WebSocket runtime для Traders (`register`, `heartbeat`, `ack/error`)
+- Session lifecycle + persistence в `TRADER_SESSION`
+- Базовый scheduler cycle + runtime telemetry
+- Compose smoke runbook и deterministic smoke tooling
 
-### 📋 Phase 2 (Planned)
-- WebSocket для Traders
-- 3 Trader экземпляра
-- Real-time мониторинг
+### 🔄 Phase 1.5 Finalization (Current)
+- `/metrics`
+- Prometheus wiring
+- integration tests
 
 ### 🚀 Phase 3 (Future)
-- Web UI
-- Metrics & Dashboards
-- Production deployment
+- Scheduler business logic, scoring, расширенные assignment rules
+- Расширение интеграции trader + web-ui
+- Production deployment hardening
 
 ## 👥 VS Code Multi-root Workspace
 
@@ -448,7 +459,7 @@ git commit -m "Fix session timeout"
 
 ```bash
 # Открыть workspace
-code ct-system.code-workspace
+code cts-system.code-workspace
 ```
 
 Workspace включает:
@@ -482,4 +493,4 @@ make logs
 
 ---
 
-**Последнее обновление:** 3 февраля 2026
+**Последнее обновление:** 14 марта 2026

@@ -1,8 +1,8 @@
 # CT-System — Общий план разработки
 
-> **Версия**: 1.0  
-> **Дата**: 2026-02-01  
-> **Статус**: Docker окружение готово | Фокус на стандартизации
+> **Версия**: 1.1  
+> **Дата**: 2026-03-14  
+> **Статус**: Docker окружение стабильно | CTS-Core Phase 2 завершена | Фокус на Phase 1.5 finalization
 
 ---
 
@@ -14,7 +14,7 @@
 |-----------|--------|--------|-------------|
 | **MySQL** | ✅ Running | 9.0 | ✅ Healthy |
 | **HSM Service** | ✅ Running | Production-ready | ✅ Healthy |
-| **CTS-Core** | ✅ Running | Phase 1.3 Complete | ✅ Healthy |
+| **CTS-Core** | ✅ Running | Phase 2 Complete | ✅ Healthy |
 | **Web UI** | ✅ Running | Operational | ✅ Healthy |
 | **Trader-1** | ✅ Running | Phase 1 Complete | ✅ Healthy |
 | **Docker Compose** | ✅ Ready | All services orchestrated | ✅ All healthy |
@@ -26,10 +26,10 @@
 - ✅ Phase 1.1: Project setup + config + logger
 - ✅ Phase 1.2: MySQL pool + repositories (8 repos)
 - ✅ Phase 1.3: HSM client (dual context: trading + 2FA)
-- 🔴 **Phase 1.4**: State management (в процессе)
-- ⏳ Phase 1.5: Basic REST API
-- ⏳ Phase 2: WebSocket + Session manager
-- ⏳ Phase 3: Task scheduler + Load balancing
+- ✅ Phase 1.4: State management
+- 🟡 Phase 1.5: Finalization (`/metrics`, Prometheus wiring, integration tests)
+- ✅ Phase 2: WebSocket runtime + session lifecycle + scheduler skeleton + smoke/runbook
+- ⏳ Phase 3: Task scheduler business logic + load balancing
 - ⏳ Phase 4: Full integration + Trade results
 
 **Trader:**
@@ -77,7 +77,7 @@
 - Web UI: разделенные логи (access.log + error.log) для аналитики и отладки
 
 **Файлы:**
-- `/home/dev/docker/ct-system/LOGGING.md` (единый документ по логированию)
+- `/home/dev/docker/cts-system/LOGGING.md` (единый документ по логированию)
 - `services/cts-core/internal/logger/logger.go`
 - `services/trader/internal/logger/logger.go`
 - `services/web-ui-go/internal/logger/logger.go` (с access/error разделением)
@@ -134,23 +134,20 @@
 
 ---
 
-### Priority 2: Завершение Phase 1 CTS-Core (5-7 дней) 🟡
+### Priority 2: CTS-Core Phase 1.5 Finalization (5-7 дней) 🟡
 
-#### 2.1. Phase 1.4: State Management (2 дня)
+#### 2.1. Phase 1.4: State Management (завершено)
 
-**Текущая проблема:**
-- Deadlock при старте CTS-Core (select без cases)
-- State persistence не реализован
+**Статус:** завершено, state persistence работает в runtime.
 
 **Задачи:**
 ```
-[ ] Реализовать StateManager (load/save daemon.state)
-[ ] Исправить deadlock в main.go
+[x] Реализовать StateManager (load/save daemon.state)
+[x] Исправить startup deadlock issues
 [x] Добавить graceful shutdown (SIGTERM, SIGINT)
-[ ] State format: JSON с версионированием
-[ ] Atomic writes (write → rename)
-[ ] Tests: state save/load/recovery
-[ ] Документация: guides/phase_1_4_state_management.md
+[x] State format: JSON с версионированием
+[x] Atomic writes (write → rename)
+[x] Базовые тесты state save/load
 ```
 
 **Файлы:**
@@ -159,25 +156,25 @@
 
 ---
 
-#### 2.2. Phase 1.5: Basic REST API (3 дня)
+#### 2.2. Phase 1.5: Finalization (3 дня)
 
 **Scope:**
-- GET `/health` - healthcheck
-- GET `/api/v1/traders` - список подключенных трейдеров
-- GET `/api/v1/traders/{id}` - информация о трейдере
-- GET `/api/v1/stats` - общая статистика
-- GET `/api/v1/tasks` - текущие задачи
+- Финализировать `/metrics`
+- Синхронизировать runtime метрики и Prometheus wiring
+- Закрыть integration тесты для health/ws smoke-path
 
 **Задачи:**
 ```
-[ ] Создать internal/api/server.go (HTTP server setup)
-[ ] Создать internal/api/rest/ handlers
-[ ] Middleware: logging, recovery, CORS
-[ ] Tests: unit + integration (httptest)
-[ ] OpenAPI spec (Swagger)
-[ ] Rate limiting (базовый)
-[ ] Документация: API_SPECIFICATION.md
+[x] REST health endpoints (`/health`, `/ready`, `/live`)
+[x] WS runtime baseline (`trader.register`, `trader.heartbeat`)
+[x] Session lifecycle persistence (`TRADER_SESSION`)
+[x] Scheduler runtime skeleton
+[ ] `/metrics` endpoint и exporter wiring
+[ ] Integration tests (compose health + ws lifecycle)
 ```
+
+Примечание:
+Исторические секции ниже (Phase 2.1/2.2/2.3 как planned) оставлены как архивная детализация. Актуальный факт: базовый объем Phase 2 для CTS-Core закрыт.
 
 **Зависимости:**
 - State Manager (Phase 1.4)
@@ -326,7 +323,7 @@
 ```
 [ ] README.md: Обновить с учетом стандартизации
 [ ] Debian PROD инструкция: добавить раздел по Trader systemd watchdog (перенесено из 1.3)
-[ ] ARCHITECTURE.md: Добавить диаграммы взаимодействия сервисов
+[ ] AUDIT_SYSTEM_PLAN.md: синхронизировать диаграммы взаимодействия сервисов
 [ ] API_SPECIFICATION.md: Унифицировать форматы всех API
 [ ] .github/workflows/: Подготовить CI pipeline (lint, test, build)
 [ ] Makefile: Добавить targets для стандартизации (make lint-all, make test-all)
@@ -500,11 +497,11 @@ gantt
 ## 📂 Структура документации
 
 ```
-/home/dev/docker/ct-system/
+/home/dev/docker/cts-system/
 ├── DEVELOPMENT_PLAN.md          # ← Этот файл (общий план)
-├── ARCHITECTURE.md              # Общая архитектура системы
+├── AUDIT_SYSTEM_PLAN.md         # Аудит и event chain план
 ├── LOGGING.md                   # Единый документ по логированию
-├── HSM_ROTATION.md              # HSM key rotation (готово)
+├── docs/                        # SSL/PKI планы
 ├── README.md                    # Quick start
 ├── docker-compose.yml           # Оркестрация
 │
@@ -586,7 +583,7 @@ make up
 
 3. **HSM Key Rotation:**
    - Автопроверка: `./check-hsm-rotation-simple.sh`
-   - Cron setup: см. `HSM_ROTATION.md`
+   - Cron/setup details: см. `services/hsm-service/KEY_ROTATION.md`
    - 67 дней до следующей ротации ✅
 
 4. **Приоритеты:**
