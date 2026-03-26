@@ -1,7 +1,8 @@
 # CT-SYSTEM Testing Strategy
 
-**Дата:** 2026-02-20
+**Дата:** 2026-03-23
 **Область:** `cts-core`, `hsm-service`, `web-ui-go`, `trader`, инфраструктура `docker compose`
+**Статус:** документ активен; завершенный coverage-этап относится к HSM Service.
 
 ---
 
@@ -183,12 +184,11 @@ make logs
 
 ---
 
-## 7. Ближайшие улучшения testing в CT-SYSTEM
+## 7. Итог по HSM coverage этапу
 
-1. Добавить `make test-web-ui`, `make test-cts-core`, `make test-hsm`, `make test-trader` (service-local)
-2. Добавить `make test-int-web-ui`, `make test-int-cts-core` (minimal integration)
-3. Поддерживать smoke-check scripts в service-local `tests/` (например `services/cts-core/tests/`)
-4. Для trader: поддерживать актуальный integration wiring в root compose
+1. Для `hsm-service` закрыт этап повышения unit coverage (internal + cmd).
+2. Для `hsm-service` закреплен полный контур: integration + e2e + security + compliance.
+3. Полный HSM-прогон выполняется через `tests/run-all-tests.sh` с финальным cleanup стенда.
 
 ---
 

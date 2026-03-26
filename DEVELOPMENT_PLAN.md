@@ -243,7 +243,18 @@
 #### 3.3. Phase 2.3: Task Scheduler (3 дня)
 
 **Алгоритм:**
-- Scoring: latency (50%) + workload (30%) + history (20%)
+- CTS-Core выбирает trader только для массива `exchange_ids`; направление `buy/sell` выбирает trader.
+- Приоритет ранжирования: latency-профиль по требуемым биржам (с учетом выбросов), а не простое среднее.
+- Источник нагрузки: `load_index` из heartbeat trader (нормированный `0..1`, отражает реальное состояние хоста).
+- Нелинейный штраф при насыщении: `load_index^2`.
+- Короткая формула ранга (меньше = лучше): `score = latency_profile_ms + 1000 * (load_index^2)`.
+- Детализация формулы (v1):
+   - `latency_profile_ms`: агрегат задержек по всем требуемым биржам с учетом worst/p95 и разброса.
+   - `load_index`: нормированный индекс загрузки (`0..1`) из CPU/RAM/network/queue.
+   - `load_index^2`: нелинейный штраф near saturation.
+   - `1000`: масштабирование load-компонента в единицы, сопоставимые с latency_ms.
+- Trader после подключения обязан слать телеметрию (`heartbeat` + `metrics.report`), CTS-Core обязан агрегировать ее в единый runtime-профиль.
+- Тесты задержек обязательны по всем биржам из `capabilities` trader; результаты входят в `latency_profile_ms`.
 - Load balancing между traders
 - Task retry на failure
 - Priority queue

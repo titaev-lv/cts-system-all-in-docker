@@ -449,7 +449,20 @@ git commit -m "Fix session timeout"
 - integration tests
 
 ### 🚀 Phase 3 (Future)
-- Scheduler business logic, scoring, расширенные assignment rules
+- Scheduler business logic и расширенные assignment rules
+- Зафиксированное правило выбора trader для массива бирж:
+    - CTS-Core выбирает только исполнителя для набора `exchange_ids`.
+    - Решение `buy/sell` принимает сам trader (не CTS-Core).
+    - Ранжирование: приоритет latency-профиля по требуемым биржам с защитой от выбросов + нелинейный штраф по нагрузке от trader.
+    - Короткая формула (меньше = лучше): `score = latency_profile_ms + 1000 * (load_index^2)`.
+    - Расчет (v1):
+        - `latency_profile_ms` = робастный профиль задержек по всем `exchange_ids` (учитываем worst/p95 и разброс между биржами).
+        - `load_index` в диапазоне `0..1` формируется на стороне trader (CPU + RAM + network + queue).
+        - `load_index^2` усиливает штраф около насыщения (near saturation).
+        - Коэффициент `1000` приводит load-штраф к масштабу миллисекунд, чтобы его можно было складывать с latency.
+    - Trader после подключения регулярно шлет телеметрию (heartbeat + metrics), CTS-Core агрегирует ее в профиль ранжирования.
+    - В `trader.register_ack` core отдает каталог доступных бирж (включая `exchange_id` и endpoint-данные), после чего trader проводит тест подключений и отправляет стартовые метрики.
+    - Тесты задержек выполняются по всем биржам из capabilities trader (не только по одной бирже по запросу).
 - Расширение интеграции trader + web-ui
 - Production deployment hardening
 
