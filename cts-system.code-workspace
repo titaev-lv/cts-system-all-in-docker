@@ -32,6 +32,10 @@
       "**/volumes/hsm-tokens/*": false,
       "services": true
     },
-    "makefile.configureOnOpen": false
+    "makefile.configureOnOpen": false,
+    "chat.tools.terminal.autoApprove": {
+      "go": true,
+      "gofmt": true
+    }
   }
 }

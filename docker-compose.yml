@@ -245,6 +245,9 @@ services:
         condition: service_healthy
     volumes:
       - ./services/trader/conf:/app/conf:ro
+      - ./volumes/pki/ca/ca.crt:/app/pki/ca/ca.crt:ro
+      - ./volumes/pki/cts-core/clients/trader-1/trader-1-cts.crt:/app/pki/cts-core/clients/trader-1/trader-1-cts.crt:ro
+      - ./volumes/pki/cts-core/clients/trader-1/trader-1-cts.key:/app/pki/cts-core/clients/trader-1/trader-1-cts.key:ro
       - ./services/trader/logs:/var/log/trader
       - ./services/trader/state:/app/state
     command: ["-c", "conf/config.yaml"]
@@ -259,10 +262,13 @@ services:
       - TRADER_DATABASES_QUOTES_CLICKHOUSE_USERNAME=default
       - TRADER_DATABASES_QUOTES_CLICKHOUSE_PASSWORD=default
       - TRADER_DATABASES_QUOTES_CLICKHOUSE_TLS_ENABLED=false
+      - TRADER_CORE_CONNECTIONS_WS_TLS_CA_PATH=/app/pki/ca/ca.crt
+      - TRADER_CORE_CONNECTIONS_WS_TLS_CERT_PATH=/app/pki/cts-core/clients/trader-1/trader-1-cts.crt
+      - TRADER_CORE_CONNECTIONS_WS_TLS_KEY_PATH=/app/pki/cts-core/clients/trader-1/trader-1-cts.key
     networks:
       - cts-net
     healthcheck:
-      test: ["CMD-SHELL", "pgrep -x trader >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "pgrep -f './trader -c conf/config.yaml' >/dev/null 2>&1 || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3

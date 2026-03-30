@@ -1,4 +1,4 @@
-.PHONY: up down restart logs ps test clean build rebuild help smoke-web-ui
+.PHONY: up down restart logs ps test clean build rebuild help smoke-web-ui smoke-core-ws logs-trader logs-trader-1 logs-trader-2 logs-trader-3
 
 # Запустить все сервисы
 up:
@@ -28,10 +28,10 @@ logs-mysql:
 logs-web-ui:
 	docker compose logs -f web-ui
 
-logs-trader-1:
-	tail -n 100 -f services/trader/logs/error.log
+logs-trader:
+	docker compose logs -f trader-1
 
-logs-trader-2:
+logs-trader-1:
 	docker compose logs -f trader-1
 
 logs-trader-2:
@@ -56,6 +56,10 @@ test-hsm:
 smoke-web-ui:
 	@echo "Running web-ui dual-mode smoke checks..."
 	./scripts/smoke/web-ui-dual-mode.sh
+
+smoke-core-ws:
+	@echo "Running CTS-Core WS hard-cutover smoke checks..."
+	./scripts/smoke/cts-core-ws-hardcutover.sh
 
 # Пересборка образов
 build:
@@ -119,10 +123,15 @@ help:
 	@echo "  make logs-core     - View CTS-Core logs"
 	@echo "  make logs-hsm      - View HSM logs"
 	@echo "  make logs-mysql    - View MySQL logs"
+	@echo "  make logs-trader   - View Trader-1 logs"
+	@echo "  make logs-trader-1 - View Trader-1 logs"
+	@echo "  make logs-trader-2 - View Trader-2 logs"
+	@echo "  make logs-trader-3 - View Trader-3 logs"
 	@echo "  make ps            - Show service status"
 	@echo "  make test          - Run CTS-Core tests"
 	@echo "  make test-hsm      - Run HSM integration tests"
 	@echo "  make smoke-web-ui  - Run web-ui direct/proxy smoke checks"
+	@echo "  make smoke-core-ws - Run CTS-Core wss+mTLS WS smoke checks"
 	@echo "  make build         - Build Docker images"
 	@echo "  make rebuild       - Rebuild images from scratch"
 	@echo "  make clean         - Remove all data (DANGER!)"

@@ -124,13 +124,12 @@ docker logs --since 2m ct-system-web-ui | tail -n 50
 ```bash
 docker compose up -d mysql hsm cts-core
 docker compose ps mysql hsm cts-core
-curl -k -sS https://127.0.0.1:8080/health || curl -sS http://127.0.0.1:8081/health
-curl -k -sS https://127.0.0.1:8080/ready || curl -sS http://127.0.0.1:8081/ready
+curl -k -sS https://127.0.0.1:8080/health
+curl -k -sS https://127.0.0.1:8080/ready
 docker logs --since 2m ct-system-cts-core | tail -n 80
 
-# deterministic WS lifecycle smoke
-cd services/cts-core
-./tests/smoke_phase2_ws_lifecycle.sh
+# deterministic WS lifecycle smoke (wss + mTLS + CN auto-create pending)
+make smoke-core-ws
 ```
 
 ---

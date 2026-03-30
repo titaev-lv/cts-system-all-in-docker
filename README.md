@@ -10,6 +10,7 @@
 - **[AUDIT_SYSTEM_PLAN.md](AUDIT_SYSTEM_PLAN.md)** - План аудита и трассировки событий
 - **[docs/MYSQL_SSL_SETUP.md](docs/MYSQL_SSL_SETUP.md)** - Настройка SSL для MySQL
 - **[docs/PKI_INFRASTRUCTURE_PLAN.md](docs/PKI_INFRASTRUCTURE_PLAN.md)** - PKI инфраструктура
+- **[docs/WS_TRANSPORT_CORE_TRADER.md](docs/WS_TRANSPORT_CORE_TRADER.md)** - Транспортный уровень WebSocket между CTS-Core и Trader
 - **services/\*/DEVELOPMENT_PLAN.md** - Детальные планы сервисов
 
 ## 🏗️ Архитектура
@@ -138,7 +139,7 @@ docker compose --profile direct up -d
 ✨ **После успешного завершения:**
 - MySQL будет готов к подключению: `localhost:3306`
 - HSM API доступен: `https://localhost:8443`
-- CTS-Core API доступен: `http://localhost:8080`
+- CTS-Core API доступен: `https://localhost:8080`
 - Все логи смотрите через: `make logs`
 
 ### 3. Проверить статус
@@ -225,6 +226,7 @@ make logs-mysql  # Логи MySQL
 make test        # Запустить тесты CTS-Core
 make test-hsm    # Запустить HSM integration тесты
 make smoke-web-ui # Smoke для web-ui direct/proxy
+make smoke-core-ws # Smoke для CTS-Core WS (wss + mTLS + pending gate)
 make health      # Проверить здоровье всех сервисов
 ```
 
@@ -276,13 +278,12 @@ make clean       # Удалить все данные (ОПАСНО!)
 
 - MySQL: `docker compose exec mysql mysqladmin ping`
 - HSM: `curl -k https://localhost:8443/health`
-- CTS-Core: `curl -k https://localhost:8080/health || curl -sS http://localhost:8081/health`
+- CTS-Core: `curl -k https://localhost:8080/health`
 
 ### CTS-Core Phase 2 smoke
 
 ```bash
-cd services/cts-core
-./tests/smoke_phase2_ws_lifecycle.sh
+make smoke-core-ws
 ```
 
 ## 🔐 Конфигурация
@@ -483,6 +484,7 @@ Workspace включает:
 ##  Примечания
 
 - **Trader работает в outbound-only режиме**: задачи и оркестрация через CTS-Core
+- **WS identity policy (trader channel)**: `trader_id` берется только из CN клиентского сертификата; `payload.trader_id` не участвует в идентификации; допускаются только сертификаты `OU=Trading`.
 - **Volumes не в git**: `volumes/` исключены из версионирования
 - **Логи каждого сервиса**: В своих директориях `services/*/logs/`
 - **Dev окружение**: Это development среда, не для production

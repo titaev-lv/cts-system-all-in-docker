@@ -191,11 +191,12 @@
 // Trader → CTS-Core
 {
   "type": "register",
-  "trader_id": "trader-1",
   "exchange": "binance",
   "capabilities": ["spot", "futures"],
   "version": "1.0.0"
 }
+
+// identity source: certificate CN (mTLS), not payload.trader_id
 
 // CTS-Core → Trader
 {
