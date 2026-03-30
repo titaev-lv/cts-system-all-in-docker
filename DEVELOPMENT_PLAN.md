@@ -1,8 +1,8 @@
 # CT-System — Общий план разработки
 
-> **Версия**: 1.1  
-> **Дата**: 2026-03-14  
-> **Статус**: Docker окружение стабильно | CTS-Core Phase 2 завершена | CTS-Core Phase 1.5 завершена | Фокус на Phase 3
+> **Версия**: 1.2  
+> **Дата**: 2026-03-30  
+> **Статус**: Docker окружение стабильно | CTS-Core Phase 2 завершена | WS transport alignment (cts-core/trader) завершен | Фокус на Hybrid Reconciliation + execution flow
 
 ---
 
@@ -34,7 +34,7 @@
 
 **Trader:**
 - ✅ Phase 1: Фундамент (структура, типы, базовая инфраструктура)
-- ⏳ Phase 2: WebSocket client к CTS-Core
+- 🟡 Phase 2: WebSocket client transport baseline завершен (register/heartbeat, TLS, close/reconnect); бизнес-обработка task-команд остается в работе
 - ⏳ Phase 3: Order book + Pub/Sub
 - ⏳ Phase 4+: Task management, Monitor/Trader roles
 
@@ -184,6 +184,8 @@
 
 ### Priority 3: WebSocket Infrastructure (7-10 дней) 🟢
 
+Статус: базовый инфраструктурный контур WS закрыт; ниже остаются следующие шаги для полного business-flow.
+
 #### 3.1. Phase 2.1: WebSocket Server для Traders (3 дня)
 
 **Протокол:**
@@ -209,12 +211,12 @@
 
 **Задачи:**
 ```
-[ ] internal/api/ws/trader_handler.go
-[ ] Connection pooling + heartbeat (30s)
-[ ] WS ping/pong: передавать heartbeat в Session Manager для health-агрегации
-[ ] Message routing (task assignment)
-[ ] Reconnection handling
-[ ] Tests: WS integration tests
+[x] WS runtime handler (`internal/api/ws/handler.go`)
+[x] Connection lifecycle + heartbeat + ping/pong таймауты
+[x] WS ping/pong интегрирован в session lifecycle
+[ ] Message routing (task assignment business-path)
+[x] Reconnection/disconnect baseline и protocol hardening (seq dedup/gap, graceful close)
+[x] Tests: WS integration/smoke baseline
 ```
 
 ---
@@ -277,11 +279,12 @@
 
 **Задачи:**
 ```
-[ ] internal/core/ws/client.go (WS client)
-[ ] Reconnection с exponential backoff
-[ ] Message handlers (register, task, heartbeat)
-[ ] Integration с существующей структурой
-[ ] Tests: WS client lifecycle
+[x] `internal/core/ctscorews/client.go` (WS client)
+[x] Reconnection с linear backoff + jitter (spec-aligned)
+[x] Message handlers (register/heartbeat + protocol envelopes)
+[x] Integration с существующей структурой
+[x] Tests: WS client lifecycle + protocol regression
+[ ] Full task command flow (`task.assign/update/remove` + result loop)
 ```
 
 ---
@@ -610,11 +613,9 @@ make up
 ## 🚀 Next Steps
 
 **Сейчас (актуально):**
-1. 🔴 **Завершить Priority 1.3** (healthchecks policy)
-   - Зафиксировать задачи, зависящие от WS (ping/pong aggregation в CTS-Core)
-   - Подготовить реализацию `CTS-Core /health` с учетом HSM + Trader статуса
-2. 🟡 **Продолжить Priority 2**: Phase 1.4 State Management в CTS-Core
-3. 🟢 **Подготовить Priority 3**: WS infrastructure (Phase 2.1/2.2)
+1. 🟢 **Priority 3 / 4**: закрыть полный task business-flow между `cts-core` и `trader` (`task.assign/update/remove`, подтверждения, result loop).
+2. 🟢 **Hybrid Reconciliation**: реализовать быстрый/медленный контур self-healing (`desired` vs `actual`).
+3. 🟡 **Health policy completion**: зафиксировать production runbook для Trader (`systemd watchdog`) и свести dev/prod healthcheck-документацию.
 
 **После Priority 5:**
 - Вернуться к отложенному блоку **Priority 5.5** (Документация + CI/CD)
