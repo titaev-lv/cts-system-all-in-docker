@@ -15,6 +15,7 @@ services:
       - ./volumes/mysql-data:/var/lib/mysql
       - ./volumes/mysql-dump:/mysql-dump
       - ./services/mysql/my.cnf:/etc/mysql/my.cnf:ro
+      - ./services/mysql/init.sql:/docker-entrypoint-initdb.d/20-mtls-users.sql:ro
       - ./volumes/pki/ca/ca-chain.crt:/etc/mysql/ssl/ca.crt:ro
       - ./volumes/pki/mysql/server/mysql.crt:/etc/mysql/ssl/mysql.crt:ro
       - ./volumes/pki/mysql/server/mysql.key:/etc/mysql/ssl/mysql.key:ro
