@@ -28810,4 +28810,26 @@ commit;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
 
+-- ============================================================================
+-- Post-dump migration 004: Add TRADER.RELEASE_VERSION
+-- ============================================================================
+-- Purpose:
+--   Keep latest trader release reported on trader.register.
+--
+-- For manual line-by-line execution in DBeaver:
+--   1) Run check query.
+--   2) Run ALTER only if release_column_exists = 0.
+
+USE ct_system;
+
+SELECT COUNT(*) AS release_column_exists
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = DATABASE()
+  AND TABLE_NAME = 'TRADER'
+  AND COLUMN_NAME = 'RELEASE_VERSION';
+
+ALTER TABLE TRADER
+    ADD COLUMN RELEASE_VERSION VARCHAR(64) NULL
+    COMMENT 'Latest trader release reported on register';
+
 -- Dump completed on 2026-02-04  1:02:10
