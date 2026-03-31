@@ -1,6 +1,6 @@
 # Транспортный уровень WebSocket между CTS-Core и Trader
 
-Дата: 2026-03-28
+Дата: 2026-04-01
 Статус: утвержденный транспортный контур
 
 ## 1. Назначение
@@ -83,8 +83,8 @@ flowchart LR
 
 Рекомендуемые стартовые значения:
 
-- интервал ping: 10 секунд;
-- таймаут pong: 30 секунд;
+- интервал heartbeat (и контрольной активности канала): 60 секунд;
+- таймаут входящей активности на стороне `cts-core`: 180 секунд;
 - таймаут записи: 5 секунд.
 
 ## 6. Порядок сообщений через seq/ack
@@ -181,11 +181,12 @@ stateDiagram-v2
   "action": "trader.register",
   "request_id": "reg-001",
   "session_id": "tmp-unset",
+  "protocol_version": "1",
   "seq": 1,
   "ack": 0,
   "ts": 1760000000000,
   "payload": {
-    "version": "2.0.2",
+    "release": "v0.0.1",
     "region": "eu"
   }
 }
@@ -205,7 +206,7 @@ stateDiagram-v2
   "payload": {
     "status": "ok",
     "trader_id": "trader-eu-1",
-    "session_timeout_sec": 30
+    "session_timeout_sec": 180
   }
 }
 ```
@@ -239,8 +240,8 @@ core_connections:
     enabled: true
     url: "wss://cts-core:8080/ws"
     reconnect_delay_sec: 5
-    heartbeat_interval_sec: 10
-    version: "2.0.2"
+    heartbeat_interval_sec: 60
+    protocol_version: "1"
     region: "eu"
     tls:
       ca_path: "/etc/ssl/cts/ca.crt"
@@ -252,6 +253,7 @@ core_connections:
 Примечание по актуальному контракту trader-конфига:
 - поле `core_connections.ws.trader_id` удалено;
 - `core_connections.ws.tls.enabled` и `core_connections.ws.tls.min_version` удалены;
+- поле `release` не задается в YAML: оно формируется из build metadata и отправляется в `trader.register`;
 - минимальная версия TLS и требование mTLS enforced в коде клиента.
 
 ## 10.2 CTS-Core
@@ -260,8 +262,8 @@ core_connections:
 
 ```yaml
 session:
-  heartbeat_interval: 10s
-  heartbeat_timeout: 30s
+  heartbeat_interval: 60s
+  heartbeat_timeout: 180s
   max_payload_bytes: 65536
   request_dedup_window: 1m
 
